@@ -163,32 +163,34 @@ Agents
 The SDK Integration Layer is the public entry point for external Yasin ecosystem projects (such as Yasin-Agent, YasinRelay, YasinCoder, YasinPress, and YasinHub). It exposes standard clients and interfaces to interact with the core runtime, events, memory, context, and other internal systems, isolating the core implementation details and providing backward-compatible APIs.
 
 
-### SDK Interaction Flow
+### SDK Integration & Interaction Flow
 
-External applications execute agent operations and run tasks by interacting directly with the `YasinCoreClient` instead of coupling directly to internal runtime or agent modules.
+External applications interact directly with the `YasinCoreClient` to perform agent tasks, manage execution context, and store or retrieve system memories. This shields external developers from internal changes to underlying agent registries, planners, memory managers, and AI model providers.
 
-The hierarchy of interaction is as follows:
+The hierarchy of interaction and state flow is as follows:
 
 ```
 External Application
-
         │
         ▼
-
  YasinCoreClient
-
         │
         ▼
-
   Agent Runtime
-
         │
         ▼
-
-     Agents
+     Memory
+        │
+        ▼
+    Context
+        │
+        ▼
+   Providers
 ```
 
-- **External Application**: Initiates interaction via the SDK, registering agents, creating tasks, and requesting executions.
-- **YasinCoreClient**: Serves as the public entry point of the SDK Layer. It internally orchestrates the Agent Runtime components.
-- **Agent Runtime**: Comprises the internal manager, planner, and task executor systems that manage agent lifecycles and schedule task runs.
-- **Agents**: Perform actual work (e.g., LLM generation, tool usage) and return results to the caller via the runtime and SDK.
+- **External Application**: Initiates agent execution, sets configurations, and queries context/memory through the public client API.
+- **YasinCoreClient**: Acts as the single unified SDK interface, orchestrating the creation of execution tasks, propagation of contexts, and retention of state records.
+- **Agent Runtime**: Dispatches execution payloads to agents and retrieves responses. During execution, it coordinates with the memory and context components.
+- **Memory**: Retains both short-term conversational context and storage-backed long-term memories. It feeds historical state to runtime agents.
+- **Context**: Thread-safely propagates active state, system configurations, and operational flags down the execution hierarchy.
+- **Providers**: AI models and tool integrations leverage the isolated active context and memories to generate context-rich completions.
