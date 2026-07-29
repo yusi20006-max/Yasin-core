@@ -156,3 +156,8 @@ Agents
 
 - **Provider Layer**:
   When executing, agents utilize the AI `Provider` interface to generate completions, access LLM intelligence, or execute complex tasks.
+
+
+## SDK Integration Layer
+
+The SDK Integration Layer is the public entry point for external Yasin ecosystem projects (such as Yasin-Agent, YasinRelay, YasinCoder, YasinPress, and YasinHub). It exposes standard clients and interfaces to interact with the core runtime, events, memory, context, and other internal systems, isolating the core implementation details and providing backward-compatible APIs.
