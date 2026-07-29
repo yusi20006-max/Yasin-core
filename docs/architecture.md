@@ -161,3 +161,34 @@ Agents
 ## SDK Integration Layer
 
 The SDK Integration Layer is the public entry point for external Yasin ecosystem projects (such as Yasin-Agent, YasinRelay, YasinCoder, YasinPress, and YasinHub). It exposes standard clients and interfaces to interact with the core runtime, events, memory, context, and other internal systems, isolating the core implementation details and providing backward-compatible APIs.
+
+
+### SDK Interaction Flow
+
+External applications execute agent operations and run tasks by interacting directly with the `YasinCoreClient` instead of coupling directly to internal runtime or agent modules.
+
+The hierarchy of interaction is as follows:
+
+```
+External Application
+
+        │
+        ▼
+
+ YasinCoreClient
+
+        │
+        ▼
+
+  Agent Runtime
+
+        │
+        ▼
+
+     Agents
+```
+
+- **External Application**: Initiates interaction via the SDK, registering agents, creating tasks, and requesting executions.
+- **YasinCoreClient**: Serves as the public entry point of the SDK Layer. It internally orchestrates the Agent Runtime components.
+- **Agent Runtime**: Comprises the internal manager, planner, and task executor systems that manage agent lifecycles and schedule task runs.
+- **Agents**: Perform actual work (e.g., LLM generation, tool usage) and return results to the caller via the runtime and SDK.
