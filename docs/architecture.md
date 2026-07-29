@@ -99,3 +99,60 @@ Storage
 
 - **Provider Layer**:
   AI Providers query the memory layer to retrieve past message histories or relevant context documents (using short-term and long-term storage) to inject into prompt generation, enriching model completions.
+
+
+## Agent Runtime Architecture
+
+Yasin-Core v0.3 introduces the execution layer designed to manage AI Agents, Tasks, and execution workflows. The system is designed with a decoupling flow of execution components:
+
+```
+Runtime
+   │
+Agent Manager
+   │
+Planner
+   │
+Executor
+   │
+Agents
+```
+
+### Component Flow
+
+1. **Runtime**:
+   Acts as the orchestrator of the system, setting up the environments and lifecycle of agents, plugins, contexts, and providers.
+
+2. **Agent Manager**:
+   Comprises the `AgentRegistry` and `AgentManager`. Handles registration, removal, listing, starting, and stopping of agents. It ensures agent instances are kept in memory and are ready to execute tasks on demand.
+
+3. **Planner**:
+   The `Planner` abstract interface and its concrete `SimplePlanner` analyze a `Task` object to translate it into a structured plan payload, determining which specific agent should handle the task and mapping required input fields.
+
+4. **Executor**:
+   The `TaskExecutor` (aliased as `Executor`) executes a task using the workflow:
+   - Takes a `Task` object.
+   - Delegates planning to a `Planner`.
+   - Locates and ensures the required agent is started via the `AgentManager`.
+   - Dispatches payload to the target `Agent`.
+   - Obtains the final outcome and records it back onto the `Task`.
+
+5. **Agents**:
+   Implementing the `BaseAgent` ABC, concrete agents perform local execution or can interface with external layers like the Provider Layer to fulfill actions.
+
+
+### Integration with Core Infrastructure
+
+- **Memory**:
+  Agents query and store state dynamically using `ShortTermMemory` and `LongTermMemory` systems, preserving history across multiple task cycles.
+
+- **Context**:
+  Execution context is preserved and isolated across tasks/threads using the standard `Context` manager, ensuring variables, credentials, and configurations remain thread-safe.
+
+- **Event Bus**:
+  Workflow transitions (e.g., Task Completion, Failure, Agent Registration) can emit corresponding events onto the `EventBus` so external components (like YasinRelay) can react dynamically.
+
+- **Plugin System**:
+  Plugins can hook into the Agent registry to dynamically inject new agents, or wrap the Executor to intercept and enrich planner tasks.
+
+- **Provider Layer**:
+  When executing, agents utilize the AI `Provider` interface to generate completions, access LLM intelligence, or execute complex tasks.
