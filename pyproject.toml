@@ -1,6 +1,6 @@
 [project]
 name = "yasin-core"
-version = "0.1.0"
+version = "0.4.1"
 description = "Core runtime for Yasin AI Ecosystem"
 requires-python = ">=3.10"
 
