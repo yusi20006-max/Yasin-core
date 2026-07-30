@@ -66,3 +66,22 @@ def test_memory_usage_through_sdk():
 
     assert client.get_memory("key1", category="short-term") == "val1"
     assert client.get_memory("key2", category="long-term") == "val2"
+
+
+def test_tool_execution_through_sdk():
+    """تست اجرای ابزارها (Tools) به کمک کلاینت SDK."""
+    client = YasinCoreClient()
+
+    from yasin_core.sdk import tool
+
+    @tool(name="format_post_for_eitaa", description="Formats text for Eitaa publishing")
+    def format_post(text: str) -> str:
+        return f"[Eitaa Channel] {text}"
+
+    client.register_tool(format_post)
+
+    assert "format_post_for_eitaa" in client.list_tools()
+    assert client.get_tool("format_post_for_eitaa") == format_post
+
+    result = client.execute_tool("format_post_for_eitaa", text="محتوای تستی")
+    assert result == "[Eitaa Channel] محتوای تستی"
