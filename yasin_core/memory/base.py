@@ -1,0 +1,38 @@
+from abc import ABC, abstractmethod
+
+
+class BaseMemory(ABC):
+
+
+    @abstractmethod
+    def get(self, key, default=None):
+
+        pass
+
+
+    @abstractmethod
+    def set(self, key, value):
+
+        pass
+
+
+    @abstractmethod
+    def delete(self, key):
+
+        pass
+
+
+    @abstractmethod
+    def clear(self):
+
+        pass
+
+
+class ShortTermMemory(BaseMemory, ABC):
+
+    pass
+
+
+class LongTermMemory(BaseMemory, ABC):
+
+    pass
