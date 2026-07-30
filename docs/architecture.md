@@ -44,15 +44,20 @@ Allows extending Yasin Core without changing the kernel.
 
 ### Provider Layer
 
-Provides abstraction for AI models.
+Provides a robust, unified abstraction for AI models and external LLM services.
 
+**Key Components (v0.5):**
+- **`AIProvider`**: Abstract base class defining the standard interface for all AI models (with the main abstract method `generate(prompt)`).
+- **`MockProvider`**: A standard provider implementation that returns mock responses, highly useful for testing and offline/local development.
+- **`LocalProvider`**: A default provider implementation simulating local model generation.
+- **`ProviderRegistry`**: Internal registry that holds, manages, and structures registered providers.
+- **`ProviderManager`**: Central management system that orchestrates provider registration, retrieval, and logger auditing, pre-registering standard default providers during initialization.
 
-Future providers:
-
-- OpenAI
-- Ollama
-- HuggingFace
-- Local Models
+**SDK Client Integration:**
+- **`register_provider(provider)`**: Register any custom AI provider with the client instance.
+- **`get_provider(name)`**: Retrieve a registered AI provider by name.
+- **`list_providers()`**: List names of all currently registered AI providers (includes `local` and `mock` by default).
+- **`generate(provider_name, prompt)`**: Convenience method on `YasinCoreClient` to execute text generation directly through a designated provider.
 
 
 ## Memory Architecture

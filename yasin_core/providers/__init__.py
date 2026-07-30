@@ -1,5 +1,15 @@
-from .base import AIProvider
+from .base import (
+    AIProvider,
+    MockProvider,
+    LocalProvider,
+    ProviderRegistry,
+    ProviderManager,
+)
 
 __all__ = [
-    "AIProvider"
+    "AIProvider",
+    "MockProvider",
+    "LocalProvider",
+    "ProviderRegistry",
+    "ProviderManager",
 ]

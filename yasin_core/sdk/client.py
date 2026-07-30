@@ -1,6 +1,7 @@
 from typing import Optional, List, Dict, Any
 from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
+from yasin_core.providers import AIProvider, ProviderManager
 
 
 class YasinCoreClient:
@@ -8,6 +9,7 @@ class YasinCoreClient:
         self._version = VERSION
         self._agent_manager = AgentManager()
         self._executor = TaskExecutor(agent_manager=self._agent_manager)
+        self._provider_manager = ProviderManager()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
@@ -83,3 +85,23 @@ class YasinCoreClient:
         """Create a new execution context."""
         from yasin_core.context import Context
         return Context(data)
+
+    # Provider Operations
+    def register_provider(self, provider: AIProvider) -> None:
+        """Register a new AI provider."""
+        self._provider_manager.register_provider(provider)
+
+    def get_provider(self, name: str) -> Optional[AIProvider]:
+        """Retrieve a registered AI provider by name."""
+        return self._provider_manager.get_provider(name)
+
+    def list_providers(self) -> List[str]:
+        """List names of all registered AI providers."""
+        return self._provider_manager.list_providers()
+
+    def generate(self, provider_name: str, prompt: str) -> str:
+        """Convenience method to trigger generation on a specific provider."""
+        provider = self.get_provider(provider_name)
+        if not provider:
+            raise ValueError(f"Provider '{provider_name}' is not registered.")
+        return provider.generate(prompt)
