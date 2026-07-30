@@ -3,14 +3,21 @@ from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
 from yasin_core.providers import AIProvider, ProviderManager
 from yasin_core.events import EventBus
+from yasin_core.plugins import PluginRegistry
 
 
 class YasinCoreClient:
     def __init__(self, short_term_memory=None, long_term_memory=None):
         self._version = VERSION
-        self.event_bus = EventBus()
-        self._agent_manager = AgentManager(event_bus=self.event_bus)
-        self._executor = TaskExecutor(agent_manager=self._agent_manager, event_bus=self.event_bus)
+        self._event_bus = EventBus()
+        self._agent_manager = AgentManager()
+        self._executor = TaskExecutor(agent_manager=self._agent_manager)
+
+        # Link event bus to components
+        self._agent_manager.event_bus = self._event_bus
+        self._executor.event_bus = self._event_bus
+
+        self._plugin_registry = PluginRegistry()
         self._provider_manager = ProviderManager()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
@@ -33,6 +40,11 @@ class YasinCoreClient:
             "version": self._version
         }
 
+    @property
+    def event_bus(self) -> EventBus:
+        """Access the central event bus."""
+        return self._event_bus
+
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
         """Register a new agent with the internal AgentManager."""
@@ -41,6 +53,10 @@ class YasinCoreClient:
     def get_agent(self, name: str) -> Optional[BaseAgent]:
         """Retrieve a registered agent by name."""
         return self._agent_manager.get_agent(name)
+
+    def remove_agent(self, name: str) -> Optional[BaseAgent]:
+        """Remove a registered agent by name."""
+        return self._agent_manager.remove_agent(name)
 
     def list_agents(self) -> List[str]:
         """List names of all registered agents."""
@@ -107,3 +123,20 @@ class YasinCoreClient:
         if not provider:
             raise ValueError(f"Provider '{provider_name}' is not registered.")
         return provider.generate(prompt)
+
+    # Plugin Operations
+    def register_plugin(self, plugin) -> None:
+        """Register a plugin instance with the internal PluginRegistry."""
+        self._plugin_registry.register(plugin)
+
+    def get_plugin(self, name: str):
+        """Retrieve a registered plugin by name."""
+        return self._plugin_registry.get(name)
+
+    def list_plugins(self) -> List[str]:
+        """List names of all registered plugins."""
+        return self._plugin_registry.list()
+
+    def discover_plugins(self, plugins_dir: str = "plugins") -> None:
+        """Discover and register plugins from the specified directory."""
+        self._plugin_registry.discover(plugins_dir)
