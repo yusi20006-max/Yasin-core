@@ -24,15 +24,22 @@ class AgentManager:
     def __init__(self, registry: Optional[AgentRegistry] = None):
         self.registry = registry if registry is not None else AgentRegistry()
         self.logger = get_logger("AGENT-MANAGER")
+        self.event_bus = None
 
     def register_agent(self, agent: BaseAgent) -> None:
         self.registry.register(agent)
         self.logger.info(f"Agent '{agent.name}' registered.")
+        if self.event_bus:
+            from yasin_core.sdk import AGENT_REGISTERED
+            self.event_bus.publish(AGENT_REGISTERED, {"agent_name": agent.name})
 
     def remove_agent(self, name: str) -> Optional[BaseAgent]:
         agent = self.registry.remove(name)
         if agent:
             self.logger.info(f"Agent '{name}' removed.")
+            if self.event_bus:
+                from yasin_core.sdk import AGENT_REMOVED
+                self.event_bus.publish(AGENT_REMOVED, {"agent_name": name})
         return agent
 
     def get_agent(self, name: str) -> Optional[BaseAgent]:
@@ -48,6 +55,9 @@ class AgentManager:
             if agent and not agent.running:
                 agent.start()
                 self.logger.info(f"Agent '{name}' started.")
+                if self.event_bus:
+                    from yasin_core.sdk import AGENT_STARTED
+                    self.event_bus.publish(AGENT_STARTED, {"agent_name": name})
 
     def stop_agents(self) -> None:
         self.logger.info("Stopping registered agents...")
@@ -56,3 +66,6 @@ class AgentManager:
             if agent and agent.running:
                 agent.stop()
                 self.logger.info(f"Agent '{name}' stopped.")
+                if self.event_bus:
+                    from yasin_core.sdk import AGENT_STOPPED
+                    self.event_bus.publish(AGENT_STOPPED, {"agent_name": name})
