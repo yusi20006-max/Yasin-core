@@ -42,6 +42,14 @@ class YasinCoreClient:
         """List names of all registered agents."""
         return self._agent_manager.list_agents()
 
+    def start_agents(self) -> None:
+        """Start all registered agents."""
+        self._agent_manager.start_agents()
+
+    def stop_agents(self) -> None:
+        """Stop all registered agents."""
+        self._agent_manager.stop_agents()
+
     # Task Operations
     def create_task(self, id: str, name: str, input_data: Optional[Dict[str, Any]] = None) -> Task:
         """Create a new Task instance."""

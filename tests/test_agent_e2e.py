@@ -1,13 +1,7 @@
 import pytest
 from typing import Any, Dict
 
-from yasin_core.agents.base import BaseAgent
-from yasin_core.agents.manager import AgentManager
-from yasin_core.agents.task import Task
-from yasin_core.agents.planner import SimplePlanner
-from yasin_core.agents.executor import TaskExecutor
-from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
-from yasin_core.context import Context, active_context, get_current_context
+from yasin_core.sdk import YasinCoreClient, BaseAgent, Task, active_context, get_current_context
 
 
 class E2ETestAgent(BaseAgent):
@@ -26,40 +20,35 @@ class E2ETestAgent(BaseAgent):
 
 
 def test_agent_runtime_e2e():
+    # Initialize public SDK client
+    client = YasinCoreClient()
+
     # 1. Create a simple test Agent using the existing BaseAgent interface.
     agent = E2ETestAgent(name="e2e-agent", description="Agent for End-to-End integration test")
 
-    # 2. Register the Agent using AgentManager.
-    manager = AgentManager()
-    manager.register_agent(agent)
+    # 2. Register the Agent using YasinCoreClient.
+    client.register_agent(agent)
 
     # Verify agent is initially stopped
     assert not agent.running
 
-    # Verify agent lifecycle works (start/stop)
-    manager.start_agents()
+    # Verify agent lifecycle works (start/stop) through YasinCoreClient
+    client.start_agents()
     assert agent.running
-    manager.stop_agents()
+    client.stop_agents()
     assert not agent.running
 
-    # 3. Create a Task.
-    task = Task(id="task-e2e-1", name="e2e-agent", input_data={"data": "success"})
+    # 3. Create a Task through the SDK client.
+    task = client.create_task(id="task-e2e-1", name="e2e-agent", input_data={"data": "success"})
     assert task.status == "pending"
 
     # Use active context to supply contextual information to the execution
-    context = Context({"prefix": "Custom Prefix"})
+    context = client.create_context({"prefix": "Custom Prefix"})
     with active_context(context):
-        # 4. Pass the Task through Planner.
-        planner = SimplePlanner()
-        plan = planner.plan(task)
-        assert plan["agent_name"] == "e2e-agent"
-        assert plan["payload"] == {"data": "success"}
+        # 4. Execute the Task using Executor through YasinCoreClient.
+        executed_task = client.execute_task(task)
 
-        # 5. Execute the Task using Executor.
-        executor = TaskExecutor(agent_manager=manager, planner=planner)
-        executed_task = executor.execute_task(task)
-
-        # 6. Verify:
+        # 5. Verify:
         # - Task status changes correctly.
         assert executed_task.status == "completed"
         # - Result is returned.
@@ -70,16 +59,38 @@ def test_agent_runtime_e2e():
         assert agent.running
 
     # Stop agents after testing
-    manager.stop_agents()
+    client.stop_agents()
     assert not agent.running
 
     # - Memory can store the result.
-    short_term_mem = InMemoryShortTermMemory()
-    long_term_mem = InMemoryLongTermMemory()
-
-    short_term_mem.set(executed_task.id, executed_task.result)
-    long_term_mem.set(executed_task.id, executed_task.result)
+    client.save_memory(executed_task.id, executed_task.result, category="short-term")
+    client.save_memory(executed_task.id, executed_task.result, category="long-term")
 
     # - Stored memory can be retrieved.
-    assert short_term_mem.get(executed_task.id) == "Custom Prefix: success"
-    assert long_term_mem.get(executed_task.id) == "Custom Prefix: success"
+    assert client.get_memory(executed_task.id, category="short-term") == "Custom Prefix: success"
+    assert client.get_memory(executed_task.id, category="long-term") == "Custom Prefix: success"
+
+
+def test_sdk_integration_explicit():
+    # Verify SDK client initialization
+    client = YasinCoreClient()
+    assert client is not None
+
+    # Verify agent registration
+    agent = E2ETestAgent(name="explicit-test-agent", description="Explicit integration test agent")
+    client.register_agent(agent)
+    assert "explicit-test-agent" in client.list_agents()
+    assert client.get_agent("explicit-test-agent") == agent
+
+    # Verify task execution
+    task = client.create_task(id="task-explicit", name="explicit-test-agent", input_data={"data": "explicit"})
+    executed_task = client.execute_task(task)
+    assert executed_task.status == "completed"
+    assert executed_task.result == "E2E Result: explicit"
+
+    # Verify memory access through SDK
+    client.save_memory("explicit_key", "explicit_value", category="short-term")
+    assert client.get_memory("explicit_key", category="short-term") == "explicit_value"
+
+    client.save_memory("explicit_long_key", "explicit_long_value", category="long-term")
+    assert client.get_memory("explicit_long_key", category="long-term") == "explicit_long_value"
