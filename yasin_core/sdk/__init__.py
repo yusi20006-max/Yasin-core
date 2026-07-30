@@ -3,6 +3,7 @@ from yasin_core.agents.base import BaseAgent
 from yasin_core.agents.task import Task
 from yasin_core.context.manager import active_context, get_current_context
 from yasin_core.plugins.bridge import PluginExecutionBridge
+from yasin_core.agents.tool import BaseTool, FunctionTool, tool, ToolRegistry, ToolManager
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -27,4 +28,9 @@ __all__ = [
     "TASK_COMPLETED",
     "TASK_FAILED",
     "PluginExecutionBridge",
+    "BaseTool",
+    "FunctionTool",
+    "tool",
+    "ToolRegistry",
+    "ToolManager",
 ]

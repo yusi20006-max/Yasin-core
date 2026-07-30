@@ -24,15 +24,15 @@ def test_sdk_import_and_creation():
 
 def test_sdk_version_methods():
     client = YasinCoreClient()
-    assert client.get_version() == "0.4.1"
-    assert client.version == "0.4.1"
+    assert client.get_version() == "1.0.0"
+    assert client.version == "1.0.0"
 
 
 def test_sdk_info_methods():
     client = YasinCoreClient()
     info_dict = client.get_info()
     assert info_dict["name"] == "Yasin Core SDK Client"
-    assert info_dict["version"] == "0.4.1"
+    assert info_dict["version"] == "1.0.0"
     info_dict_alt = client.info()
     assert info_dict_alt == info_dict
 
