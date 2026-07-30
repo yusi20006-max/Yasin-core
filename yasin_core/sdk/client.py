@@ -1,10 +1,7 @@
-# Progress: [████████░░] 80%
-
 from typing import Optional, List, Dict, Any
 from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
 from yasin_core.providers import AIProvider, ProviderManager
-from yasin_core.agents.tool import BaseTool, ToolManager
 
 
 class YasinCoreClient:
@@ -13,7 +10,6 @@ class YasinCoreClient:
         self._agent_manager = AgentManager()
         self._executor = TaskExecutor(agent_manager=self._agent_manager)
         self._provider_manager = ProviderManager()
-        self._tool_manager = ToolManager()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
@@ -109,25 +105,3 @@ class YasinCoreClient:
         if not provider:
             raise ValueError(f"Provider '{provider_name}' is not registered.")
         return provider.generate(prompt)
-
-    # Tool Operations
-    def register_tool(self, tool: BaseTool) -> None:
-        """Register a new agent tool."""
-        self._tool_manager.register_tool(tool)
-
-    def get_tool(self, name: str) -> Optional[BaseTool]:
-        """Retrieve a registered agent tool by name."""
-        return self._tool_manager.get_tool(name)
-
-    def list_tools(self) -> List[str]:
-        """List names of all registered agent tools."""
-        return self._tool_manager.list_tools()
-
-    def execute_tool(self, name: str, *args: Any, **kwargs: Any) -> Any:
-        """Execute a registered agent tool by name with arguments."""
-        return self._tool_manager.execute_tool(name, *args, **kwargs)
-
-    @property
-    def tool_manager(self) -> ToolManager:
-        """Expose the ToolManager instance."""
-        return self._tool_manager

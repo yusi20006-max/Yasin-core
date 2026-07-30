@@ -60,25 +60,6 @@ Provides a robust, unified abstraction for AI models and external LLM services.
 - **`generate(provider_name, prompt)`**: Convenience method on `YasinCoreClient` to execute text generation directly through a designated provider.
 
 
-### Agent Tool System (v0.7)
-
-Provides an execution abstraction layer for tools/capabilities that agents can leverage.
-
-**Key Components:**
-- **`BaseTool`**: Abstract base class defining standard metadata (`name`, `description`, `args_schema`) and execution contract (`execute(*args, **kwargs)`).
-- **`FunctionTool`**: A concrete wrapper to seamlessly convert standard Python functions into system-compatible tools.
-- **`tool`**: A high-level decorator supporting parameterless or parameterized decorator instantiation to easily convert functions into `FunctionTool` objects.
-- **`ToolRegistry`**: Internal key-value registry managing registered tool instances.
-- **`ToolManager`**: Central component to register, retrieve, list, and safely execute registered tools.
-
-**SDK Client Integration:**
-- **`register_tool(tool)`**: Register any custom tool with the SDK client.
-- **`get_tool(name)`**: Retrieve a registered tool by name.
-- **`list_tools()`**: List names of all registered tools.
-- **`execute_tool(name, *args, **kwargs)`**: Directly execute a registered tool and return its output.
-- **`tool_manager`**: Public property exposing the internal `ToolManager` instance.
-
-
 ## Memory Architecture
 
 The Memory Architecture in Yasin Core v0.2 provides memory, context, and storage infrastructure while preserving the existing v0.1 architecture. It is designed around a layered flow where data and execution state flow from the top-level runtime down to persistent storage:

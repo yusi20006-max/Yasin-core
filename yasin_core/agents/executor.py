@@ -35,6 +35,8 @@ class TaskExecutor:
             # Ensure agent is running/started
             if not agent.running:
                 agent.start()
+                if self.event_bus:
+                    self.event_bus.publish(AGENT_STARTED, {"agent_name": agent_name})
 
             # 3. Agent executes the action
             result = agent.execute(payload)
