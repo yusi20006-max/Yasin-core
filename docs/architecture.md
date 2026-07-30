@@ -199,3 +199,34 @@ External Application
 - **Memory**: Retains both short-term conversational context and storage-backed long-term memories. It feeds historical state to runtime agents.
 - **Context**: Thread-safely propagates active state, system configurations, and operational flags down the execution hierarchy.
 - **Providers**: AI models and tool integrations leverage the isolated active context and memories to generate context-rich completions.
+
+
+## Plugin Runtime Integration
+
+The Agent Runtime integrates seamlessly with the Plugin System using public SDK and Plugin interfaces, allowing automated plugin execution and dynamic capability extension.
+
+### Interaction Flow
+
+The interaction flow during a plugin execution is structured as follows:
+
+```
+Agent
+  ↓
+Plugin Runtime
+  ↓
+Plugin
+  ↓
+Result
+```
+
+1. **Agent**: The `PluginExecutionBridge` acts as an Agent in the Agent Runtime. When the client executes a task targeting this bridge, the agent takes the input payload.
+2. **Plugin Runtime**: The bridge looks up the targeted plugin from the `PluginRegistry`.
+3. **Plugin**: The bridge dynamically invokes the standard execution method (e.g. `execute`, `run`, or call) on the plugin instance.
+4. **Result**: The plugin performs its logic and returns the output result, which the bridge updates on the execution `Task`.
+
+### Core System Integration
+
+- **Event Bus**: Transitions in plugin execution (such as `TASK_STARTED`, `TASK_COMPLETED`, and `TASK_FAILED`) emit corresponding events to the `EventBus` allowing external subscribers to audit and trace executions.
+- **Memory**: During execution, plugins and agents can query and save states to the `InMemoryShortTermMemory` or `InMemoryLongTermMemory` instances via the client.
+- **Context**: State, metadata, and variables are propagated down through thread-safe `active_context` variables.
+- **SDK**: The `YasinCoreClient` exposes clean, public APIs (`register_plugin`, `get_plugin`, `list_plugins`, `discover_plugins`) to manage the complete plugin lifecycle from a single entry point.
