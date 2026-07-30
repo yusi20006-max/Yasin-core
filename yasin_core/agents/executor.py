@@ -1,42 +1,23 @@
-# Progress: [ ] 75%
-
 from typing import Optional
 from yasin_core.agents.task import Task
 from yasin_core.agents.planner import Planner, SimplePlanner
 from yasin_core.agents.manager import AgentManager
 from yasin_core.utils.logger import get_logger
-from yasin_core.events.event_bus import (
-    EventBus,
-    TASK_STARTED,
-    TASK_COMPLETED,
-    TASK_FAILED,
-    AGENT_STARTED,
-)
 
 
 class TaskExecutor:
     def __init__(
         self,
         agent_manager: AgentManager,
-        planner: Optional[Planner] = None,
-        event_bus: Optional[EventBus] = None
+        planner: Optional[Planner] = None
     ):
         self.agent_manager = agent_manager
         self.planner = planner if planner is not None else SimplePlanner()
         self.logger = get_logger("TASK-EXECUTOR")
-        self.event_bus = event_bus
 
     def execute_task(self, task: Task) -> Task:
         self.logger.info(f"Starting execution of task: {task.id} ({task.name})")
         task.status = "running"
-
-        if self.event_bus:
-            self.event_bus.publish(TASK_STARTED, {
-                "task_id": task.id,
-                "task_name": task.name,
-                "task": task.to_dict()
-            })
-
         try:
             # 1. Planner generates execution plan
             plan = self.planner.plan(task)
@@ -65,26 +46,10 @@ class TaskExecutor:
             task.status = "completed"
             self.logger.info(f"Task {task.id} completed successfully.")
 
-            if self.event_bus:
-                self.event_bus.publish(TASK_COMPLETED, {
-                    "task_id": task.id,
-                    "task_name": task.name,
-                    "result": result,
-                    "task": task.to_dict()
-                })
-
         except Exception as e:
             task.status = "failed"
             task.error = str(e)
             self.logger.error(f"Task {task.id} failed: {e}")
-
-            if self.event_bus:
-                self.event_bus.publish(TASK_FAILED, {
-                    "task_id": task.id,
-                    "task_name": task.name,
-                    "error": str(e),
-                    "task": task.to_dict()
-                })
 
         return task
 

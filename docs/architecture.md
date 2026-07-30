@@ -1,5 +1,3 @@
-# Progress: [ ] 70%
-
 # Yasin Core Architecture
 
 
@@ -163,77 +161,6 @@ Agents
 
 - **Provider Layer**:
   When executing, agents utilize the AI `Provider` interface to generate completions, access LLM intelligence, or execute complex tasks.
-
-
-### Event Bus Integration (v0.6)
-
-The Agent Runtime is tightly integrated with Yasin-Core's Event Bus starting from version v0.6. This enables reactive event-driven application architectures where ecosystem plugins or host applications can listen and respond dynamically to agent lifecycles and task execution pipelines.
-
-#### 1. Available Event Names
-The following event string constants are defined in `yasin_core.events` and exposed in the public `yasin_core.sdk`:
-- **`AGENT_REGISTERED`** (`"agent_registered"`): Published when an agent is registered in the system.
-- **`AGENT_REMOVED`** (`"agent_removed"`): Published when an agent is removed from the system.
-- **`AGENT_STARTED`** (`"agent_started"`): Published when an agent is started (manually or auto-started).
-- **`AGENT_STOPPED`** (`"agent_stopped"`): Published when an agent is stopped.
-- **`TASK_STARTED`** (`"task_started"`): Published when task execution begins.
-- **`TASK_COMPLETED`** (`"task_completed"`): Published when a task successfully finishes execution.
-- **`TASK_FAILED`** (`"task_failed"`): Published when a task fails during planning or execution.
-
-#### 2. Event Payloads
-Every event publishes custom context-rich dictionary payloads:
-- **`AGENT_REGISTERED`, `AGENT_REMOVED`, `AGENT_STARTED`, `AGENT_STOPPED`**:
-  ```json
-  {
-    "agent_name": "agent-unique-name"
-  }
-  ```
-- **`TASK_STARTED`**:
-  ```json
-  {
-    "task_id": "task-uuid-or-id",
-    "task_name": "target-agent-name",
-    "task": {
-      "id": "task-uuid-or-id",
-      "name": "target-agent-name",
-      "input_data": { ... },
-      "status": "running",
-      "result": null,
-      "error": null
-    }
-  }
-  ```
-- **`TASK_COMPLETED`**:
-  ```json
-  {
-    "task_id": "task-uuid-or-id",
-    "task_name": "target-agent-name",
-    "result": "final-execution-result-data",
-    "task": {
-      "id": "task-uuid-or-id",
-      "name": "target-agent-name",
-      "input_data": { ... },
-      "status": "completed",
-      "result": "final-execution-result-data",
-      "error": null
-    }
-  }
-  ```
-- **`TASK_FAILED`**:
-  ```json
-  {
-    "task_id": "task-uuid-or-id",
-    "task_name": "target-agent-name",
-    "error": "Error message / traceback description",
-    "task": {
-      "id": "task-uuid-or-id",
-      "name": "target-agent-name",
-      "input_data": { ... },
-      "status": "failed",
-      "result": null,
-      "error": "Error message / traceback description"
-    }
-  }
-  ```
 
 
 ## SDK Integration Layer

@@ -1,18 +1,14 @@
-# Progress: [ ] 75%
-
 from typing import Optional, List, Dict, Any
 from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
 from yasin_core.providers import AIProvider, ProviderManager
-from yasin_core.events import EventBus
 
 
 class YasinCoreClient:
-    def __init__(self, short_term_memory=None, long_term_memory=None, event_bus: Optional[EventBus] = None):
+    def __init__(self, short_term_memory=None, long_term_memory=None):
         self._version = VERSION
-        self._event_bus = event_bus or EventBus()
-        self._agent_manager = AgentManager(event_bus=self._event_bus)
-        self._executor = TaskExecutor(agent_manager=self._agent_manager, event_bus=self._event_bus)
+        self._agent_manager = AgentManager()
+        self._executor = TaskExecutor(agent_manager=self._agent_manager)
         self._provider_manager = ProviderManager()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
@@ -34,11 +30,6 @@ class YasinCoreClient:
             "name": "Yasin Core SDK Client",
             "version": self._version
         }
-
-    @property
-    def event_bus(self) -> EventBus:
-        """Get the EventBus instance utilized by the client SDK."""
-        return self._event_bus
 
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
