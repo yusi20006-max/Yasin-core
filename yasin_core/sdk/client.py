@@ -4,6 +4,7 @@ from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
 from yasin_core.providers import AIProvider, ProviderManager
 from yasin_core.events import EventBus
 from yasin_core.plugins import PluginRegistry
+from yasin_core.agents.tool import ToolManager, BaseTool
 
 
 class YasinCoreClient:
@@ -19,6 +20,7 @@ class YasinCoreClient:
 
         self._plugin_registry = PluginRegistry()
         self._provider_manager = ProviderManager()
+        self._tool_manager = ToolManager()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
@@ -140,3 +142,24 @@ class YasinCoreClient:
     def discover_plugins(self, plugins_dir: str = "plugins") -> None:
         """Discover and register plugins from the specified directory."""
         self._plugin_registry.discover(plugins_dir)
+
+    # Tool Operations
+    def register_tool(self, tool: BaseTool) -> None:
+        """Register a tool instance with the internal ToolManager."""
+        self._tool_manager.register_tool(tool)
+
+    def get_tool(self, name: str) -> Optional[BaseTool]:
+        """Retrieve a registered tool by name."""
+        return self._tool_manager.get_tool(name)
+
+    def remove_tool(self, name: str) -> Optional[BaseTool]:
+        """Remove a registered tool by name."""
+        return self._tool_manager.remove_tool(name)
+
+    def list_tools(self) -> List[str]:
+        """List names of all registered tools."""
+        return self._tool_manager.list_tools()
+
+    def execute_tool(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        """Execute a registered tool by name with arguments."""
+        return self._tool_manager.execute_tool(name, *args, **kwargs)
