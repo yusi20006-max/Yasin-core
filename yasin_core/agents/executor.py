@@ -1,18 +1,26 @@
-from typing import Optional
+from typing import Optional, Any
 from yasin_core.agents.task import Task
 from yasin_core.agents.planner import Planner, SimplePlanner
 from yasin_core.agents.manager import AgentManager
 from yasin_core.utils.logger import get_logger
+from yasin_core.events import (
+    AGENT_STARTED,
+    TASK_STARTED,
+    TASK_COMPLETED,
+    TASK_FAILED,
+)
 
 
 class TaskExecutor:
     def __init__(
         self,
         agent_manager: AgentManager,
-        planner: Optional[Planner] = None
+        planner: Optional[Planner] = None,
+        event_bus: Optional[Any] = None
     ):
         self.agent_manager = agent_manager
         self.planner = planner if planner is not None else SimplePlanner()
+        self.event_bus = event_bus
         self.logger = get_logger("TASK-EXECUTOR")
         self.event_bus = None
 

@@ -1,6 +1,12 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from yasin_core.agents.base import BaseAgent
 from yasin_core.utils.logger import get_logger
+from yasin_core.events import (
+    AGENT_REGISTERED,
+    AGENT_REMOVED,
+    AGENT_STARTED,
+    AGENT_STOPPED,
+)
 
 
 class AgentRegistry:
@@ -21,8 +27,9 @@ class AgentRegistry:
 
 
 class AgentManager:
-    def __init__(self, registry: Optional[AgentRegistry] = None):
+    def __init__(self, registry: Optional[AgentRegistry] = None, event_bus: Optional[Any] = None):
         self.registry = registry if registry is not None else AgentRegistry()
+        self.event_bus = event_bus
         self.logger = get_logger("AGENT-MANAGER")
         self.event_bus = None
 
