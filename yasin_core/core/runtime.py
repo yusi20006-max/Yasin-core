@@ -1,3 +1,4 @@
+from yasin_core.version import VERSION
 from yasin_core.utils.logger import get_logger
 
 
@@ -35,5 +36,5 @@ class YasinRuntime:
         return {
             "name": "Yasin Core",
             "running": self.running,
-            "version": "0.1.0"
+            "version": VERSION
         }
