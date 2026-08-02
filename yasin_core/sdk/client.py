@@ -5,10 +5,11 @@ from yasin_core.providers import AIProvider, ProviderManager
 from yasin_core.events import EventBus
 from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
+from yasin_core.runtime.registry import RuntimeServiceRegistry
 
 
 class YasinCoreClient:
-    def __init__(self, short_term_memory=None, long_term_memory=None):
+    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None):
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
@@ -21,6 +22,7 @@ class YasinCoreClient:
         self._plugin_registry = PluginRegistry()
         self._provider_manager = ProviderManager()
         self._tool_manager = ToolManager()
+        self._service_registry = service_registry or RuntimeServiceRegistry()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
@@ -46,6 +48,11 @@ class YasinCoreClient:
     def event_bus(self) -> EventBus:
         """Access the central event bus."""
         return self._event_bus
+
+    @property
+    def service_registry(self) -> RuntimeServiceRegistry:
+        """Access the centralized service registry."""
+        return self._service_registry
 
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
