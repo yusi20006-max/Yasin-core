@@ -1,3 +1,4 @@
+from .event import Event
 from .event_bus import (
     EventBus,
     AGENT_REGISTERED,
@@ -10,6 +11,7 @@ from .event_bus import (
 )
 
 __all__ = [
+    "Event",
     "EventBus",
     "AGENT_REGISTERED",
     "AGENT_REMOVED",

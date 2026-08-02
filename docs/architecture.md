@@ -20,21 +20,52 @@ Responsible for:
 
 ### Event Bus
 
-Provides internal communication between modules.
+Yasin-Core v1.5 introduces a centralized, thread-safe, and modular **Event Bus architecture** under `yasin_core.events` (and exposed publicly via the SDK `yasin_core.sdk` and `client.event_bus`).
 
+The Event Bus allows decoupled, event-driven communication across Yasin ecosystem components, facilitating reactive pipelines, future plugin updates, and distributed system integrations.
 
-Example:
+#### Key Capabilities
 
-YasinRelay
+- **Separation of Concerns**: Event models (`Event`) are completely decoupled from transport and delivery logic (`EventBus`).
+- **Standard Event Model (`Event`)**: Standardizes event fields including a unique `event_id` (UUID format), standard creation `timestamp` (datetime format), custom `metadata`, and arbitrary `payload`.
+- **Absolute Backward Compatibility**: The `Event` class subclasses `dict` and implements custom `__eq__` checks against its payload, enabling older systems/callbacks expecting plain dictionary payloads or raw strings/objects to work seamlessly without modification.
+- **Filtering Support**: Subscribers can register callbacks with a dedicated `filter_func: Callable[[Event], bool]` argument to consume only events matching specific criteria.
+- **Asynchronous & Synchronous Handling**:
+  - Standard synchronous event handling.
+  - Asynchronous handlers (`async def` or callbacks registered with `async_handle=True`) are supported. Sync handlers are dispatched to a background thread pool (`ThreadPoolExecutor`), while coroutines are seamlessly scheduled on the active event loop.
+- **Error Isolation**: Each subscriber invocation is individually isolated. Exceptions raised in subscriber callbacks are caught, logged, and isolated from other listeners and the publisher.
+- **Configurable Event History**: Stores a bounded queue of recently published events, exposing retrieval APIs (`get_history(limit, event_name)`) and clear functions.
+- **Runtime and DI Integration**: The central `EventBus` instance is registered within the `YasinRuntime` and injected directly as a singleton into the DI Container (`EventBus` and `"event_bus"`), enabling zero-config service injection.
 
-emits:
+#### Usage Example
 
-NEW_CONTENT
+```python
+from yasin_core.sdk import YasinCoreClient, Event
 
+# Initialize Client
+client = YasinCoreClient()
+bus = client.event_bus
 
-YasinPress
+# Define standard subscription
+def on_agent_registered(event: Event):
+    print(f"Agent Registered: {event['agent_name']} (Event ID: {event.event_id})")
 
-receives event.
+bus.subscribe("agent_registered", on_agent_registered)
+
+# Define a subscription with filtering
+def on_critical_alert(event: Event):
+    print(f"CRITICAL Alert: {event['message']}")
+
+bus.subscribe(
+    "system_alert",
+    on_critical_alert,
+    filter_func=lambda evt: evt.get("severity") == "critical"
+)
+
+# Publish an event
+bus.publish("agent_registered", {"agent_name": "Assistant-Agent"})
+bus.publish("system_alert", {"message": "Memory threshold reached"}, severity="critical")
+```
 
 
 ### Plugin System

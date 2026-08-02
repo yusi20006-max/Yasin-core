@@ -2,6 +2,7 @@ from yasin_core.version import VERSION
 from yasin_core.utils.logger import get_logger
 from yasin_core.runtime.registry import RuntimeServiceRegistry
 from yasin_core.context.engine import ContextEngine
+from yasin_core.events import EventBus
 from yasin_core.di import DIContainer
 
 
@@ -16,6 +17,7 @@ class YasinRuntime:
         self.running = False
         self.registry = RuntimeServiceRegistry()
         self.context_engine = ContextEngine()
+        self.event_bus = EventBus()
         self.container = DIContainer()
 
         # Register standard runtime components within the DI Container
@@ -27,6 +29,8 @@ class YasinRuntime:
         self.container.register_instance("registry", self.registry)
         self.container.register_instance(ContextEngine, self.context_engine)
         self.container.register_instance("context_engine", self.context_engine)
+        self.container.register_instance(EventBus, self.event_bus)
+        self.container.register_instance("event_bus", self.event_bus)
 
 
     def start(self):
