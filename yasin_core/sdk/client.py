@@ -21,7 +21,7 @@ class YasinCoreClient:
         self._agent_manager.event_bus = self._event_bus
         self._executor.event_bus = self._event_bus
 
-        self._plugin_registry = PluginRegistry()
+        self._plugin_registry = PluginRegistry(event_bus=self._event_bus)
         self._provider_manager = ProviderManager()
         self._tool_manager = ToolManager()
         self._service_registry = service_registry or RuntimeServiceRegistry()
@@ -40,6 +40,16 @@ class YasinCoreClient:
         self._di_container.register_instance(ContextEngine, self._context_engine)
         self._di_container.register_instance("context_engine", self._context_engine)
         self._di_container.register_instance("event_bus", self._event_bus)
+        self._di_container.register_instance(PluginRegistry, self._plugin_registry)
+        self._di_container.register_instance("plugin_registry", self._plugin_registry)
+
+        # Register PluginRegistry within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="plugin_registry",
+            service=self._plugin_registry,
+            version=self._version,
+            description="Manages core and third-party plugin lifecycles."
+        )
 
     @property
     def di_container(self) -> DIContainer:
@@ -161,6 +171,10 @@ class YasinCoreClient:
         """Register a plugin instance with the internal PluginRegistry."""
         self._plugin_registry.register(plugin)
 
+    def unregister_plugin(self, name: str) -> None:
+        """Unregister a plugin from the internal PluginRegistry."""
+        self._plugin_registry.unregister(name)
+
     def get_plugin(self, name: str):
         """Retrieve a registered plugin by name."""
         return self._plugin_registry.get(name)
@@ -172,6 +186,30 @@ class YasinCoreClient:
     def discover_plugins(self, plugins_dir: str = "plugins") -> None:
         """Discover and register plugins from the specified directory."""
         self._plugin_registry.discover(plugins_dir)
+
+    def load_plugin(self, name: str) -> None:
+        """Load a registered plugin by name."""
+        self._plugin_registry.load_plugin(name)
+
+    def unload_plugin(self, name: str) -> None:
+        """Unload a loaded plugin by name."""
+        self._plugin_registry.unload_plugin(name)
+
+    def start_plugin(self, name: str) -> None:
+        """Start a registered plugin by name."""
+        self._plugin_registry.start_plugin(name)
+
+    def stop_plugin(self, name: str) -> None:
+        """Stop an active plugin by name."""
+        self._plugin_registry.stop_plugin(name)
+
+    def get_plugin_state(self, name: str) -> str:
+        """Get the current lifecycle state of a registered plugin."""
+        return self._plugin_registry.get_state(name).value
+
+    def get_plugin_status(self) -> Dict[str, Any]:
+        """Retrieve status of the plugin registry and registered plugins."""
+        return self._plugin_registry.status()
 
     # Tool Operations
     def register_tool(self, tool: BaseTool) -> None:
