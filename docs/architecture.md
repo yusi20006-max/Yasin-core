@@ -230,3 +230,68 @@ Result
 - **Memory**: During execution, plugins and agents can query and save states to the `InMemoryShortTermMemory` or `InMemoryLongTermMemory` instances via the client.
 - **Context**: State, metadata, and variables are propagated down through thread-safe `active_context` variables.
 - **SDK**: The `YasinCoreClient` exposes clean, public APIs (`register_plugin`, `get_plugin`, `list_plugins`, `discover_plugins`) to manage the complete plugin lifecycle from a single entry point.
+
+
+## Runtime Service Manager
+
+The **Runtime Service Manager** (`RuntimeServiceManager`) serves as the central orchestrator and dependency tracking registry for services across the Yasin ecosystem. It manages the lifecycle (registration, startup/initialization, shutdown, configuration reload, health, and status reporting) of both core and extension services.
+
+### Key Capabilities
+
+1. **Service Lifecycle & States**:
+   Services move through a deterministic set of states managed by the orchestrator:
+   - `UNINITIALIZED`: Service registered but not started.
+   - `INITIALIZING`: Service in process of startup.
+   - `ACTIVE`: Service fully operational.
+   - `FAILED`: Initialization threw an unhandled exception.
+   - `STOPPED`: Service gracefully shut down.
+
+2. **Dependency Resolution & Sequencing**:
+   Services can declare dependencies on other registered services. Using a topological sort algorithm, `RuntimeServiceManager` automatically calculates a deterministic, dependency-respecting startup order. It also includes:
+   - **Missing Dependency Detection**: Pre-initialization check to verify all declared dependencies are registered.
+   - **Circular Dependency Detection**: Validates that no cyclic dependency loops exist among registered services.
+   - **Graceful Shutdown Sequencing**: Performs shutdown in the exact reverse order of initialization, ensuring dependent services are stopped before their dependencies.
+
+3. **Status and Health Inspection**:
+   - **Health Reporting**: Aggregates health data from all active services. If any service fails or reports unhealthy, the overall system health reports as unhealthy.
+   - **Status Reporting**: Returns a detailed snapshot of service states, metadata (version, description, dependencies), and any custom status keys returned by active services.
+
+### Usage Example
+
+```python
+from yasin_core.runtime import RuntimeServiceManager, BaseService, ServiceMetadata
+
+class DatabaseService(BaseService):
+    def initialize(self):
+        # Establish connection
+        pass
+
+    def shutdown(self):
+        # Close connection
+        pass
+
+class AuthService(BaseService):
+    def initialize(self):
+        # Set up authentication handlers
+        pass
+
+# Setup Manager
+manager = RuntimeServiceManager()
+
+# Register Services
+manager.register_service(DatabaseService(), ServiceMetadata(name="database", version="1.0.0"))
+manager.register_service(AuthService(), ServiceMetadata(name="auth", version="1.0.0", dependencies=["database"]))
+
+# Initialize all services in dependency order (database -> auth)
+manager.initialize()
+
+# Inspect status & health
+print(manager.status())
+print(manager.health())
+
+# Reload configurations
+manager.reload()
+
+# Shutdown in reverse order (auth -> database)
+manager.shutdown()
+```
