@@ -5,6 +5,14 @@ from yasin_core.context.manager import active_context, get_current_context
 from yasin_core.context.engine import RuntimeContext, ContextEngine
 from yasin_core.plugins.bridge import PluginExecutionBridge
 from yasin_core.agents.tool import BaseTool, FunctionTool, tool, ToolRegistry, ToolManager
+from yasin_core.di import (
+    DIContainer,
+    IDIContainer,
+    ServiceLifetime,
+    DIError,
+    DependencyResolutionError,
+    CircularDependencyError,
+)
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -36,4 +44,10 @@ __all__ = [
     "tool",
     "ToolRegistry",
     "ToolManager",
+    "DIContainer",
+    "IDIContainer",
+    "ServiceLifetime",
+    "DIError",
+    "DependencyResolutionError",
+    "CircularDependencyError",
 ]
