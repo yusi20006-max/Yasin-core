@@ -230,3 +230,58 @@ Result
 - **Memory**: During execution, plugins and agents can query and save states to the `InMemoryShortTermMemory` or `InMemoryLongTermMemory` instances via the client.
 - **Context**: State, metadata, and variables are propagated down through thread-safe `active_context` variables.
 - **SDK**: The `YasinCoreClient` exposes clean, public APIs (`register_plugin`, `get_plugin`, `list_plugins`, `discover_plugins`) to manage the complete plugin lifecycle from a single entry point.
+
+
+## Context Engine
+
+The **Context Engine** is a centralized, thread-safe context management system that manages runtime execution context shared across the Yasin ecosystem.
+
+### Key Capabilities
+
+1. **Context Creation & Isolation**:
+   The engine creates and tracks isolated `RuntimeContext` instances. Each context is assigned a unique ID (UUID format) to ensure absolute uniqueness across concurrent threads.
+
+2. **Hierarchical Propagation (Parent-Child Fallback)**:
+   Contexts can be created as children of existing contexts. If a key is requested from a child context but not found locally, the query automatically propagates/falls back to the parent context.
+
+3. **Lifecycle Management**:
+   The engine tracks and manages the active/inactive state of contexts. Deleting a context deactivates it and removes it from active tracking.
+
+4. **Serialization and Deserialization**:
+   Supports native dictionary-based serialization (`serialize()`) and deserialization (`deserialize()`) of context states (ID, Parent ID, Data payload, Metadata, Active state), facilitating state persistence and cross-network propagation.
+
+5. **Runtime and SDK Integration**:
+   - **`YasinRuntime`**: Integrates a dedicated `ContextEngine` into the core runtime, exposing the context status in the overall runtime status report.
+   - **`YasinCoreClient`**: Exposes the context engine directly through the public SDK interface (`client.context_engine`).
+
+### Usage Example
+
+```python
+from yasin_core.sdk import YasinCoreClient, RuntimeContext
+
+# Initialize Client
+client = YasinCoreClient()
+
+# Create a Parent Context with global properties
+parent_ctx = client.context_engine.create_context(
+    data={"env": "production", "debug": False},
+    metadata={"owner": "platform-team"}
+)
+
+# Create a Child Context with local overrides and parent linkage
+child_ctx = client.context_engine.create_context(
+    data={"debug": True, "task_id": "999"},
+    parent_id=parent_ctx.id
+)
+
+# Fallback/Propagation check
+print(child_ctx.get("env"))       # Returns "production" (falls back to parent)
+print(child_ctx.get("debug"))     # Returns True (retrieved from local override)
+print(child_ctx.get("task_id"))   # Returns "999" (retrieved from local)
+
+# Serialization
+payload = child_ctx.serialize()
+
+# Deserialization
+restored_ctx = RuntimeContext.deserialize(payload, engine=client.context_engine)
+```

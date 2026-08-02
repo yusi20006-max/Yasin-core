@@ -1,6 +1,7 @@
 from yasin_core.version import VERSION
 from yasin_core.utils.logger import get_logger
 from yasin_core.runtime.registry import RuntimeServiceRegistry
+from yasin_core.context.engine import ContextEngine
 
 
 class YasinRuntime:
@@ -13,6 +14,7 @@ class YasinRuntime:
 
         self.running = False
         self.registry = RuntimeServiceRegistry()
+        self.context_engine = ContextEngine()
 
 
     def start(self):
@@ -41,5 +43,6 @@ class YasinRuntime:
             "name": "Yasin Core",
             "running": self.running,
             "version": VERSION,
-            "registry": self.registry.get_status()
+            "registry": self.registry.get_status(),
+            "context": self.context_engine.get_status()
         }
