@@ -230,3 +230,118 @@ Result
 - **Memory**: During execution, plugins and agents can query and save states to the `InMemoryShortTermMemory` or `InMemoryLongTermMemory` instances via the client.
 - **Context**: State, metadata, and variables are propagated down through thread-safe `active_context` variables.
 - **SDK**: The `YasinCoreClient` exposes clean, public APIs (`register_plugin`, `get_plugin`, `list_plugins`, `discover_plugins`) to manage the complete plugin lifecycle from a single entry point.
+
+
+## Runtime Service Manager
+
+The **Runtime Service Manager** (`RuntimeServiceManager`) serves as the central orchestrator and dependency tracking registry for services across the Yasin ecosystem. It manages the lifecycle (registration, startup/initialization, shutdown, configuration reload, health, and status reporting) of both core and extension services.
+
+### Key Capabilities
+
+1. **Service Lifecycle & States**:
+   Services move through a deterministic set of states managed by the orchestrator:
+   - `UNINITIALIZED`: Service registered but not started.
+   - `INITIALIZING`: Service in process of startup.
+   - `ACTIVE`: Service fully operational.
+   - `FAILED`: Initialization threw an unhandled exception.
+   - `STOPPED`: Service gracefully shut down.
+
+2. **Dependency Resolution & Sequencing**:
+   Services can declare dependencies on other registered services. Using a topological sort algorithm, `RuntimeServiceManager` automatically calculates a deterministic, dependency-respecting startup order. It also includes:
+   - **Missing Dependency Detection**: Pre-initialization check to verify all declared dependencies are registered.
+   - **Circular Dependency Detection**: Validates that no cyclic dependency loops exist among registered services.
+   - **Graceful Shutdown Sequencing**: Performs shutdown in the exact reverse order of initialization, ensuring dependent services are stopped before their dependencies.
+
+3. **Status and Health Inspection**:
+   - **Health Reporting**: Aggregates health data from all active services. If any service fails or reports unhealthy, the overall system health reports as unhealthy.
+   - **Status Reporting**: Returns a detailed snapshot of service states, metadata (version, description, dependencies), and any custom status keys returned by active services.
+
+### Usage Example
+
+```python
+from yasin_core.runtime import RuntimeServiceManager, BaseService, ServiceMetadata
+
+class DatabaseService(BaseService):
+    def initialize(self):
+        # Establish connection
+        pass
+
+    def shutdown(self):
+        # Close connection
+        pass
+
+class AuthService(BaseService):
+    def initialize(self):
+        # Set up authentication handlers
+        pass
+
+# Setup Manager
+manager = RuntimeServiceManager()
+
+# Register Services
+manager.register_service(DatabaseService(), ServiceMetadata(name="database", version="1.0.0"))
+manager.register_service(AuthService(), ServiceMetadata(name="auth", version="1.0.0", dependencies=["database"]))
+
+# Initialize all services in dependency order (database -> auth)
+manager.initialize()
+
+# Inspect status & health
+print(manager.status())
+print(manager.health())
+
+# Reload configurations
+manager.reload()
+
+# Shutdown in reverse order (auth -> database)
+manager.shutdown()
+```
+
+
+## Runtime Service Registry
+
+The **Runtime Service Registry** (`RuntimeServiceRegistry`) is a centralized, thread-safe service discovery and registry module built directly on top of the underlying `RuntimeServiceManager`. It serves as the single point of contact for external systems and standard services to register, discover, and trace runtime dependencies and lifecycles safely across multiple execution threads.
+
+### Key Features & Design
+
+1. **Centralized Discovery APIs**:
+   Exposes high-level service discovery methods (`has_service`, `get_service`, `list_services`, and `get_service_metadata`).
+
+2. **Custom Metadata Support**:
+   Allows attaching rich, dynamic metadata to registered services (passed via `metadata_dict` to `register_service`), enabling service discovery engines to filter and inspect services based on arbitrary properties (e.g., environment, provider type, routing tables).
+
+3. **Thread-Safe Operations**:
+   Utilizes internal re-entrant locks (`threading.RLock`) for all service mutations, lookups, and lifecycle invocations, ensuring absolute concurrency safety when services are registered or discovered dynamically.
+
+4. **Integration with YasinRuntime**:
+   Integrates seamlessly with the central `YasinRuntime` lifecycle. Instantiating the runtime creates a dedicated `registry`. Starting the runtime automatically triggers `initialize_services()`, and stopping it executes `shutdown_services()`.
+
+5. **Public SDK & YasinCoreClient Exposure**:
+   Fully exposed via the `yasin_core.sdk` import and accessible as a first-class property `client.service_registry` on `YasinCoreClient`. This ensures external components (such as YasinCLI or YasinRelay) can discover and consume core services solely through clean public contracts.
+
+### Usage Example
+
+```python
+from yasin_core.sdk import YasinCoreClient, BaseService
+
+client = YasinCoreClient()
+
+class EmailNotifierService(BaseService):
+    def initialize(self):
+        # Setup SMTP
+        pass
+
+# Thread-safe registration with dynamic metadata
+client.service_registry.register_service(
+    name="notifier",
+    service=EmailNotifierService(),
+    version="1.2.0",
+    description="SMTP Notifier",
+    metadata_dict={"scope": "global", "type": "communication"}
+)
+
+# Thread-safe service lookup/discovery
+if client.service_registry.has_service("notifier"):
+    notifier = client.service_registry.get_service("notifier")
+    metadata = client.service_registry.get_service_metadata("notifier")
+    print(f"Discovered: {metadata.description} (v{metadata.version})")
+```

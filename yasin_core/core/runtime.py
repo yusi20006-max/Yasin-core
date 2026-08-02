@@ -1,5 +1,6 @@
 from yasin_core.version import VERSION
 from yasin_core.utils.logger import get_logger
+from yasin_core.runtime.registry import RuntimeServiceRegistry
 
 
 class YasinRuntime:
@@ -11,6 +12,7 @@ class YasinRuntime:
         )
 
         self.running = False
+        self.registry = RuntimeServiceRegistry()
 
 
     def start(self):
@@ -20,6 +22,7 @@ class YasinRuntime:
         )
 
         self.running = True
+        self.registry.initialize_services()
 
 
     def stop(self):
@@ -29,6 +32,7 @@ class YasinRuntime:
         )
 
         self.running = False
+        self.registry.shutdown_services()
 
 
     def status(self):
@@ -36,5 +40,6 @@ class YasinRuntime:
         return {
             "name": "Yasin Core",
             "running": self.running,
-            "version": VERSION
+            "version": VERSION,
+            "registry": self.registry.get_status()
         }

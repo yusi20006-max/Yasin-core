@@ -1,10 +1,8 @@
-from .version import VERSION
-from .runtime import (
-    RuntimeServiceManager,
-    IService,
-    BaseService,
-    ServiceMetadata,
-    ServiceState,
+from .service_manager import RuntimeServiceManager
+from .registry import RuntimeServiceRegistry
+from .interfaces import IService, BaseService
+from .models import ServiceMetadata, ServiceState
+from .exceptions import (
     ServiceError,
     DuplicateServiceError,
     ServiceNotFoundError,
@@ -13,11 +11,9 @@ from .runtime import (
     CircularDependencyError
 )
 
-__version__ = VERSION
-
 __all__ = [
-    "VERSION",
     "RuntimeServiceManager",
+    "RuntimeServiceRegistry",
     "IService",
     "BaseService",
     "ServiceMetadata",
