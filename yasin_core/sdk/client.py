@@ -7,10 +7,11 @@ from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
 from yasin_core.runtime.registry import RuntimeServiceRegistry
 from yasin_core.context.engine import ContextEngine
+from yasin_core.di import DIContainer
 
 
 class YasinCoreClient:
-    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None, context_engine=None):
+    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None, context_engine=None, di_container=None):
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
@@ -25,10 +26,25 @@ class YasinCoreClient:
         self._tool_manager = ToolManager()
         self._service_registry = service_registry or RuntimeServiceRegistry()
         self._context_engine = context_engine or ContextEngine()
+        self._di_container = di_container or DIContainer()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
         self._long_term_memory = long_term_memory or InMemoryLongTermMemory()
+
+        # Register services within the DI Container for clean service composition
+        self._di_container.register_instance(YasinCoreClient, self)
+        self._di_container.register_instance("client", self)
+        self._di_container.register_instance(RuntimeServiceRegistry, self._service_registry)
+        self._di_container.register_instance("service_registry", self._service_registry)
+        self._di_container.register_instance(ContextEngine, self._context_engine)
+        self._di_container.register_instance("context_engine", self._context_engine)
+        self._di_container.register_instance("event_bus", self._event_bus)
+
+    @property
+    def di_container(self) -> DIContainer:
+        """Access the centralized Dependency Injection Container."""
+        return self._di_container
 
     @property
     def version(self) -> str:

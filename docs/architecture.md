@@ -60,6 +60,23 @@ Provides a robust, unified abstraction for AI models and external LLM services.
 - **`generate(provider_name, prompt)`**: Convenience method on `YasinCoreClient` to execute text generation directly through a designated provider.
 
 
+## Dependency Injection Container
+
+Yasin-Core v1.4 introduces a thread-safe, lightweight **Dependency Injection (DI) Container** under `yasin_core.di` (and exposed publicly via the SDK `yasin_core.sdk` and `client.di_container`).
+
+The DI container facilitates clean modular service composition and reduces coupling across Yasin-Core modules by serving as a centralized composition root.
+
+### Key Capabilities
+
+- **Lifetime Management**: Support for `SINGLETON` (cached and reused) and `TRANSIENT` (newly constructed per resolve) service lifetimes.
+- **Constructor Injection**: Automatically parses constructor parameters (`__init__`) using type hints and parameter names to inject resolved dependencies.
+- **Autowiring**: Supports resolving and constructing concrete, unregistered classes dynamically by autowiring their dependencies.
+- **Cycle Detection**: Detects circular dependencies at resolution time and throws a descriptive `CircularDependencyError`.
+- **Missing Dependency Detection**: Emits clean `DependencyResolutionError` exceptions when a parameter cannot be resolved.
+
+For detailed usage guide and examples, see [Dependency Injection Documentation](dependency_injection.md).
+
+
 ## Memory Architecture
 
 The Memory Architecture in Yasin Core v0.2 provides memory, context, and storage infrastructure while preserving the existing v0.1 architecture. It is designed around a layered flow where data and execution state flow from the top-level runtime down to persistent storage:

@@ -2,6 +2,7 @@ from yasin_core.version import VERSION
 from yasin_core.utils.logger import get_logger
 from yasin_core.runtime.registry import RuntimeServiceRegistry
 from yasin_core.context.engine import ContextEngine
+from yasin_core.di import DIContainer
 
 
 class YasinRuntime:
@@ -15,6 +16,17 @@ class YasinRuntime:
         self.running = False
         self.registry = RuntimeServiceRegistry()
         self.context_engine = ContextEngine()
+        self.container = DIContainer()
+
+        # Register standard runtime components within the DI Container
+        self.container.register_instance(DIContainer, self.container)
+        self.container.register_instance("container", self.container)
+        self.container.register_instance(YasinRuntime, self)
+        self.container.register_instance("runtime", self)
+        self.container.register_instance(RuntimeServiceRegistry, self.registry)
+        self.container.register_instance("registry", self.registry)
+        self.container.register_instance(ContextEngine, self.context_engine)
+        self.container.register_instance("context_engine", self.context_engine)
 
 
     def start(self):
@@ -44,5 +56,8 @@ class YasinRuntime:
             "running": self.running,
             "version": VERSION,
             "registry": self.registry.get_status(),
-            "context": self.context_engine.get_status()
+            "context": self.context_engine.get_status(),
+            "di_container": {
+                "registered_services": [str(k) for k in self.container._registrations.keys()]
+            }
         }
