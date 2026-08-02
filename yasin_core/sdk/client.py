@@ -6,10 +6,11 @@ from yasin_core.events import EventBus
 from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
 from yasin_core.runtime.registry import RuntimeServiceRegistry
+from yasin_core.context.engine import ContextEngine
 
 
 class YasinCoreClient:
-    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None):
+    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None, context_engine=None):
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
@@ -23,6 +24,7 @@ class YasinCoreClient:
         self._provider_manager = ProviderManager()
         self._tool_manager = ToolManager()
         self._service_registry = service_registry or RuntimeServiceRegistry()
+        self._context_engine = context_engine or ContextEngine()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
@@ -53,6 +55,11 @@ class YasinCoreClient:
     def service_registry(self) -> RuntimeServiceRegistry:
         """Access the centralized service registry."""
         return self._service_registry
+
+    @property
+    def context_engine(self) -> ContextEngine:
+        """Access the centralized context engine."""
+        return self._context_engine
 
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
