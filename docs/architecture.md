@@ -219,7 +219,7 @@ Plugin
 Result
 ```
 
-1. **Agent**: The `PluginExecutionBridge` acts as an Agent in the Agent Runtime. When the client executes a task targeting this bridge, the agent takes the input payload.
+1. **Agent**: The `PluginExecutionBridge` act as an Agent in the Agent Runtime. When the client executes a task targeting this bridge, the agent takes the input payload.
 2. **Plugin Runtime**: The bridge looks up the targeted plugin from the `PluginRegistry`.
 3. **Plugin**: The bridge dynamically invokes the standard execution method (e.g. `execute`, `run`, or call) on the plugin instance.
 4. **Result**: The plugin performs its logic and returns the output result, which the bridge updates on the execution `Task`.
@@ -294,4 +294,54 @@ manager.reload()
 
 # Shutdown in reverse order (auth -> database)
 manager.shutdown()
+```
+
+
+## Runtime Service Registry
+
+The **Runtime Service Registry** (`RuntimeServiceRegistry`) is a centralized, thread-safe service discovery and registry module built directly on top of the underlying `RuntimeServiceManager`. It serves as the single point of contact for external systems and standard services to register, discover, and trace runtime dependencies and lifecycles safely across multiple execution threads.
+
+### Key Features & Design
+
+1. **Centralized Discovery APIs**:
+   Exposes high-level service discovery methods (`has_service`, `get_service`, `list_services`, and `get_service_metadata`).
+
+2. **Custom Metadata Support**:
+   Allows attaching rich, dynamic metadata to registered services (passed via `metadata_dict` to `register_service`), enabling service discovery engines to filter and inspect services based on arbitrary properties (e.g., environment, provider type, routing tables).
+
+3. **Thread-Safe Operations**:
+   Utilizes internal re-entrant locks (`threading.RLock`) for all service mutations, lookups, and lifecycle invocations, ensuring absolute concurrency safety when services are registered or discovered dynamically.
+
+4. **Integration with YasinRuntime**:
+   Integrates seamlessly with the central `YasinRuntime` lifecycle. Instantiating the runtime creates a dedicated `registry`. Starting the runtime automatically triggers `initialize_services()`, and stopping it executes `shutdown_services()`.
+
+5. **Public SDK & YasinCoreClient Exposure**:
+   Fully exposed via the `yasin_core.sdk` import and accessible as a first-class property `client.service_registry` on `YasinCoreClient`. This ensures external components (such as YasinCLI or YasinRelay) can discover and consume core services solely through clean public contracts.
+
+### Usage Example
+
+```python
+from yasin_core.sdk import YasinCoreClient, BaseService
+
+client = YasinCoreClient()
+
+class EmailNotifierService(BaseService):
+    def initialize(self):
+        # Setup SMTP
+        pass
+
+# Thread-safe registration with dynamic metadata
+client.service_registry.register_service(
+    name="notifier",
+    service=EmailNotifierService(),
+    version="1.2.0",
+    description="SMTP Notifier",
+    metadata_dict={"scope": "global", "type": "communication"}
+)
+
+# Thread-safe service lookup/discovery
+if client.service_registry.has_service("notifier"):
+    notifier = client.service_registry.get_service("notifier")
+    metadata = client.service_registry.get_service_metadata("notifier")
+    print(f"Discovered: {metadata.description} (v{metadata.version})")
 ```
