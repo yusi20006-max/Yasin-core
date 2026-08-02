@@ -6,7 +6,6 @@ from yasin_core.plugins.bridge import PluginExecutionBridge
 from yasin_core.agents.tool import BaseTool, FunctionTool, tool, ToolRegistry, ToolManager
 from yasin_core.runtime import (
     RuntimeServiceManager,
-    RuntimeServiceRegistry,
     IService,
     BaseService,
     ServiceMetadata,
@@ -48,7 +47,6 @@ __all__ = [
     "ToolRegistry",
     "ToolManager",
     "RuntimeServiceManager",
-    "RuntimeServiceRegistry",
     "IService",
     "BaseService",
     "ServiceMetadata",

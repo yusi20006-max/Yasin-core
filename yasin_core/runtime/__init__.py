@@ -1,5 +1,4 @@
 from .service_manager import RuntimeServiceManager
-from .registry import RuntimeServiceRegistry
 from .interfaces import IService, BaseService
 from .models import ServiceMetadata, ServiceState
 from .exceptions import (
@@ -13,7 +12,6 @@ from .exceptions import (
 
 __all__ = [
     "RuntimeServiceManager",
-    "RuntimeServiceRegistry",
     "IService",
     "BaseService",
     "ServiceMetadata",
