@@ -222,3 +222,32 @@ The centralized Configuration Management subsystem manages core and plugin-speci
 3. **Sensitive Data Masking**: Secure handling mechanism which registers sensitive config paths (e.g., API keys, database credentials) and automatically hides them with asterisks (`******`) when querying registry status or serializing configurations for logs.
 4. **Plugin Configuration Namespace Isolation**: Dynamic registration of schema definitions for plugin extensions, namespaced securely under `plugins.<plugin_name>.*` using `register_plugin_config()`.
 5. **Runtime Integration**: Exposes configuration services under the centralized Dependency Injection (DI) Container and Runtime Service Registry, allowing seamless programmatic lookup via `YasinCoreClient.config`.
+
+---
+
+## Yasin-Core v2.0 Runtime Orchestrator Architecture
+
+The Runtime Orchestrator represents the central execution coordination layer of the Yasin Ecosystem. It manages the entire application lifecycle, from startup sequencing to dynamic reloading, health monitoring, and graceful shutdown.
+
+### Architecture Features
+
+1. **Central Execution Coordination & State Machine**:
+   Maintains a thread-safe, strict finite state machine backed by reentrant locks (`RLock`). It transitions components through deterministic states:
+   - `UNINITIALIZED` (Startup state)
+   - `INITIALIZING` (Bootstrap and topological ordering phase)
+   - `RUNNING` (Active service execution state)
+   - `SHUTTING_DOWN` (Graceful rollback phase)
+   - `STOPPED` (All services cleanly terminated)
+   - `FAILED` (Halt state due to error, preserving debugging details)
+
+2. **Dependency-Aware Startup & Rollback**:
+   Interacts with the `RuntimeServiceRegistry` to initialize services in correct topological order based on declared dependencies. On shutdown, services are cleanly closed in reverse order to protect system state and data integrity.
+
+3. **Subsystem Integration & Status Reporting**:
+   Consolidates runtime configurations, Dependency Injection (DI) registries, Event Bus notifications, Context Engine pools, and memory providers to report deep, unified status and health analytics of all core subsystems.
+
+4. **CLI & Distributed Direct Control Control**:
+   Exposes a command-dispatching interface `execute_command(command, *args, **kwargs)` supporting CLI-friendly endpoints like `start`, `stop`, `reload`, `status`, and `health`. This forms the foundation for secure remote runtime management in distributed environments.
+
+5. **Ecosystem & SDK Exposure**:
+   Integrated natively as `client.orchestrator` inside `YasinCoreClient` and registered as a central DI singleton, offering unified control APIs across all integration scripts, agents, and external CLI tools.

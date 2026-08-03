@@ -212,3 +212,15 @@ class ContextEngine:
                 for cid, ctx_payload in payload.items():
                     ctx = RuntimeContext.deserialize(ctx_payload, engine=self)
                     self._contexts[cid] = ctx
+
+    def retrieve_context_memories(self, context_id: str, client: Any) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Retrieve memories belonging to the specified context ID.
+        """
+        with self._lock:
+            short_term_entries = client.short_term_memory.filter({"context_id": context_id})
+            long_term_entries = client.long_term_memory.filter({"context_id": context_id})
+            return {
+                "short-term": [entry.to_dict() for entry in short_term_entries],
+                "long-term": [entry.to_dict() for entry in long_term_entries],
+            }
