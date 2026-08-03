@@ -6,6 +6,7 @@ from yasin_core.events import EventBus
 from yasin_core.di import DIContainer
 from yasin_core.config import ConfigurationManager
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState
+from yasin_core.execution import TaskExecutionEngine
 
 
 class YasinRuntime:
@@ -22,6 +23,7 @@ class YasinRuntime:
         self.container = DIContainer()
         self.config = ConfigurationManager()
         self.orchestrator = RuntimeOrchestrator(self)
+        self.execution = TaskExecutionEngine(self)
 
         # Register standard runtime components within the DI Container
         self.container.register_instance(DIContainer, self.container)
@@ -38,6 +40,8 @@ class YasinRuntime:
         self.container.register_instance("config", self.config)
         self.container.register_instance(RuntimeOrchestrator, self.orchestrator)
         self.container.register_instance("orchestrator", self.orchestrator)
+        self.container.register_instance(TaskExecutionEngine, self.execution)
+        self.container.register_instance("execution", self.execution)
 
         # Register config service in service registry
         self.registry.register_service(
@@ -45,6 +49,15 @@ class YasinRuntime:
             service=self.config,
             version=VERSION,
             description="Manages core configuration."
+        )
+
+        # Register execution service in service registry
+        self.registry.register_service(
+            name="execution",
+            service=self.execution,
+            version=VERSION,
+            description="Manages unified background task/job execution workflows.",
+            dependencies=["config"]
         )
 
 
