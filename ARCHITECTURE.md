@@ -192,3 +192,33 @@ YasinRelay integrates seamlessly with the **Yasin-Core** platform using only the
 2. **Dedicated AI Agent**: AI-related operations are executed by registering a `YasinRelayAIAgent` (which inherits from `BaseAgent` in `yasin_core.sdk`) with the SDK.
 3. **Execution Context & Lifecycle**: Execution contexts are created using `client.create_context(...)` and propagated cleanly using `with active_context(ctx)`. Tasks are executed using `client.execute_task(task)` which handles the actual agent invocation.
 4. **Unified Memory**: All short-term and long-term memory operations (e.g., in `yasinrelay/agent/memory.py` and post-execution storage) leverage the SDK's `save_memory()` and `get_memory()` APIs, delegating state management to the underlying Yasin-Core memory provider.
+
+## Configuration Management Core v1.7 Architecture
+The centralized Configuration Management subsystem manages core and plugin-specific settings dynamically, ensuring that all components across the Yasin Ecosystem have thread-safe, structured runtime configuration access.
+
+### Architecture Features
+1. **Layered Merging Strategy**: Config loading follows a deterministic hierarchical priority flow:
+   ```
+   +-------------------------+
+   |    Runtime Overrides    | (Highest Priority)
+   +------------+------------+
+                |
+                v
+   +------------+------------+
+   |   Environment Variables | (Pre-fixed with YASIN_)
+   +------------+------------+
+                |
+                v
+   +------------+------------+
+   |   User Configuration File| (Custom YAML)
+   +------------+------------+
+                |
+                v
+   +------------+------------+
+   |   System Default Config | (default.yaml) (Lowest Priority)
+   +-------------------------+
+   ```
+2. **Type-Safe Schema & Dynamic Validation**: Registration of key schemas defining strict data types, requirement rules, and custom validation callables to reject malformed configurations at initialization or dynamic updates.
+3. **Sensitive Data Masking**: Secure handling mechanism which registers sensitive config paths (e.g., API keys, database credentials) and automatically hides them with asterisks (`******`) when querying registry status or serializing configurations for logs.
+4. **Plugin Configuration Namespace Isolation**: Dynamic registration of schema definitions for plugin extensions, namespaced securely under `plugins.<plugin_name>.*` using `register_plugin_config()`.
+5. **Runtime Integration**: Exposes configuration services under the centralized Dependency Injection (DI) Container and Runtime Service Registry, allowing seamless programmatic lookup via `YasinCoreClient.config`.

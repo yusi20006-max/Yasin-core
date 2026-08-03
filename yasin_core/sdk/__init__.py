@@ -1,4 +1,5 @@
 from .client import YasinCoreClient
+from yasin_core.config import ConfigurationManager, ConfigurationValidationError, Settings
 from yasin_core.agents.base import BaseAgent
 from yasin_core.agents.task import Task
 from yasin_core.context.manager import active_context, get_current_context
@@ -26,6 +27,9 @@ TASK_FAILED = "task_failed"
 
 __all__ = [
     "YasinCoreClient",
+    "ConfigurationManager",
+    "ConfigurationValidationError",
+    "Settings",
     "BaseAgent",
     "Task",
     "active_context",

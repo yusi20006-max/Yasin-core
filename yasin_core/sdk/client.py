@@ -8,10 +8,11 @@ from yasin_core.agents.tool import ToolManager, BaseTool
 from yasin_core.runtime.registry import RuntimeServiceRegistry
 from yasin_core.context.engine import ContextEngine
 from yasin_core.di import DIContainer
+from yasin_core.config import ConfigurationManager
 
 
 class YasinCoreClient:
-    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None, context_engine=None, di_container=None):
+    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None, context_engine=None, di_container=None, config_manager=None):
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
@@ -27,6 +28,7 @@ class YasinCoreClient:
         self._service_registry = service_registry or RuntimeServiceRegistry()
         self._context_engine = context_engine or ContextEngine()
         self._di_container = di_container or DIContainer()
+        self._config_manager = config_manager or ConfigurationManager()
 
         from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
@@ -42,6 +44,8 @@ class YasinCoreClient:
         self._di_container.register_instance("event_bus", self._event_bus)
         self._di_container.register_instance(PluginRegistry, self._plugin_registry)
         self._di_container.register_instance("plugin_registry", self._plugin_registry)
+        self._di_container.register_instance(ConfigurationManager, self._config_manager)
+        self._di_container.register_instance("config", self._config_manager)
 
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
@@ -50,11 +54,22 @@ class YasinCoreClient:
             version=self._version,
             description="Manages core and third-party plugin lifecycles."
         )
+        self._service_registry.register_service(
+            name="config",
+            service=self._config_manager,
+            version=self._version,
+            description="Manages ecosystem configuration."
+        )
 
     @property
     def di_container(self) -> DIContainer:
         """Access the centralized Dependency Injection Container."""
         return self._di_container
+
+    @property
+    def config(self) -> ConfigurationManager:
+        """Access the centralized Configuration Manager."""
+        return self._config_manager
 
     @property
     def version(self) -> str:

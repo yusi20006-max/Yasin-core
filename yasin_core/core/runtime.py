@@ -4,6 +4,7 @@ from yasin_core.runtime.registry import RuntimeServiceRegistry
 from yasin_core.context.engine import ContextEngine
 from yasin_core.events import EventBus
 from yasin_core.di import DIContainer
+from yasin_core.config import ConfigurationManager
 
 
 class YasinRuntime:
@@ -19,6 +20,7 @@ class YasinRuntime:
         self.context_engine = ContextEngine()
         self.event_bus = EventBus()
         self.container = DIContainer()
+        self.config = ConfigurationManager()
 
         # Register standard runtime components within the DI Container
         self.container.register_instance(DIContainer, self.container)
@@ -31,6 +33,16 @@ class YasinRuntime:
         self.container.register_instance("context_engine", self.context_engine)
         self.container.register_instance(EventBus, self.event_bus)
         self.container.register_instance("event_bus", self.event_bus)
+        self.container.register_instance(ConfigurationManager, self.config)
+        self.container.register_instance("config", self.config)
+
+        # Register config service in service registry
+        self.registry.register_service(
+            name="config",
+            service=self.config,
+            version=VERSION,
+            description="Manages core configuration."
+        )
 
 
     def start(self):
