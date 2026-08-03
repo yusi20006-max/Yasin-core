@@ -11,6 +11,8 @@ from yasin_core.context.manager import get_current_context
 from yasin_core.di import DIContainer
 from yasin_core.config import ConfigurationManager
 from yasin_core.storage.base import BaseStorage
+from yasin_core.memory import ShortTermMemory, LongTermMemory
+from yasin_core.core.orchestrator import RuntimeOrchestrator
 
 
 class YasinCoreClient:
@@ -41,6 +43,7 @@ class YasinCoreClient:
         self._context_engine = context_engine or ContextEngine()
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
+        self._orchestrator = RuntimeOrchestrator(self)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (
@@ -95,6 +98,12 @@ class YasinCoreClient:
         self._di_container.register_instance(BaseStorage, self._storage)
         self._di_container.register_instance("storage", self._storage)
 
+        # Register RuntimeOrchestrator
+        self._di_container.register_instance(
+            RuntimeOrchestrator, self._orchestrator
+        )
+        self._di_container.register_instance("orchestrator", self._orchestrator)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="plugin_registry",
@@ -135,9 +144,44 @@ class YasinCoreClient:
         return self._di_container
 
     @property
+    def container(self) -> DIContainer:
+        """Access the centralized Dependency Injection Container (alias)."""
+        return self._di_container
+
+    @property
     def config(self) -> ConfigurationManager:
         """Access the centralized Configuration Manager."""
         return self._config_manager
+
+    @property
+    def registry(self) -> RuntimeServiceRegistry:
+        """Access the centralized service registry (alias)."""
+        return self._service_registry
+
+    @property
+    def orchestrator(self) -> RuntimeOrchestrator:
+        """Access the Runtime Orchestrator."""
+        return self._orchestrator
+
+    def start(self) -> None:
+        """Start the orchestrator."""
+        self._orchestrator.start()
+
+    def stop(self) -> None:
+        """Stop the orchestrator."""
+        self._orchestrator.stop()
+
+    def reload(self) -> None:
+        """Reload services inside the orchestrator."""
+        self._orchestrator.reload()
+
+    def health(self) -> Dict[str, Any]:
+        """Check overall health status."""
+        return self._orchestrator.health()
+
+    def status(self) -> Dict[str, Any]:
+        """Check overall status report."""
+        return self._orchestrator.status()
 
     @property
     def storage(self) -> BaseStorage:
@@ -220,7 +264,7 @@ class YasinCoreClient:
 
     # Memory Operations
     def save_memory(
-        self, key: str, value: Any, category: str = "short-term"
+        self, key: str, value: Any, category: str = "short-term", metadata: Optional[Dict[str, Any]] = None, ttl: Optional[int] = None
     ) -> None:
         """Save a memory entry into short-term or long-term memory."""
         # Auto-tag with any active context ID from get_current_context or similar

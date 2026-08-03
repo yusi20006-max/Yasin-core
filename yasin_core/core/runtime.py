@@ -5,6 +5,7 @@ from yasin_core.context.engine import ContextEngine
 from yasin_core.events import EventBus
 from yasin_core.di import DIContainer
 from yasin_core.config import ConfigurationManager
+from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState
 
 
 class YasinRuntime:
@@ -15,12 +16,12 @@ class YasinRuntime:
             "CORE"
         )
 
-        self.running = False
         self.registry = RuntimeServiceRegistry()
         self.context_engine = ContextEngine()
         self.event_bus = EventBus()
         self.container = DIContainer()
         self.config = ConfigurationManager()
+        self.orchestrator = RuntimeOrchestrator(self)
 
         # Register standard runtime components within the DI Container
         self.container.register_instance(DIContainer, self.container)
@@ -35,6 +36,8 @@ class YasinRuntime:
         self.container.register_instance("event_bus", self.event_bus)
         self.container.register_instance(ConfigurationManager, self.config)
         self.container.register_instance("config", self.config)
+        self.container.register_instance(RuntimeOrchestrator, self.orchestrator)
+        self.container.register_instance("orchestrator", self.orchestrator)
 
         # Register config service in service registry
         self.registry.register_service(
@@ -45,14 +48,21 @@ class YasinRuntime:
         )
 
 
+    @property
+    def running(self) -> bool:
+        return self.orchestrator.state == RuntimeState.RUNNING
+
+    @running.setter
+    def running(self, value: bool) -> None:
+        pass
+
     def start(self):
 
         self.logger.info(
             "Yasin Core Runtime started"
         )
 
-        self.running = True
-        self.registry.initialize_services()
+        self.orchestrator.start()
 
 
     def stop(self):
@@ -61,8 +71,7 @@ class YasinRuntime:
             "Yasin Core Runtime stopped"
         )
 
-        self.running = False
-        self.registry.shutdown_services()
+        self.orchestrator.stop()
 
 
     def status(self):
@@ -75,5 +84,6 @@ class YasinRuntime:
             "context": self.context_engine.get_status(),
             "di_container": {
                 "registered_services": [str(k) for k in self.container._registrations.keys()]
-            }
+            },
+            "orchestrator": self.orchestrator.status()
         }
