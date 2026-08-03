@@ -39,6 +39,17 @@ from yasin_core.storage import (
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState, OrchestratorError
 from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine
 
+# Import API Gateway components
+from yasin_core.api import (
+    APIRequest,
+    APIResponse,
+    APIError,
+    APIErrorCode,
+    BaseAuthenticator,
+    APIKeyAuthenticator,
+    APIGateway,
+)
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
