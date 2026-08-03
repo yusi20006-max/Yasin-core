@@ -7,6 +7,7 @@ from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
 from yasin_core.runtime.registry import RuntimeServiceRegistry
 from yasin_core.context.engine import ContextEngine
+from yasin_core.context.manager import get_current_context
 from yasin_core.di import DIContainer
 from yasin_core.config import ConfigurationManager
 from yasin_core.storage.base import BaseStorage
@@ -114,6 +115,20 @@ class YasinCoreClient:
             description="Manages ecosystem storage services.",
         )
 
+        # Register Memory services within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="short_term_memory",
+            service=self._short_term_memory,
+            version=self._version,
+            description="Short-term working memory layer."
+        )
+        self._service_registry.register_service(
+            name="long_term_memory",
+            service=self._long_term_memory,
+            version=self._version,
+            description="Long-term semantic/persistent memory layer."
+        )
+
     @property
     def di_container(self) -> DIContainer:
         """Access the centralized Dependency Injection Container."""
@@ -157,6 +172,16 @@ class YasinCoreClient:
         """Access the centralized context engine."""
         return self._context_engine
 
+    @property
+    def short_term_memory(self) -> ShortTermMemory:
+        """Access short-term memory."""
+        return self._short_term_memory
+
+    @property
+    def long_term_memory(self) -> LongTermMemory:
+        """Access long-term memory."""
+        return self._long_term_memory
+
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
         """Register a new agent with the internal AgentManager."""
@@ -198,10 +223,20 @@ class YasinCoreClient:
         self, key: str, value: Any, category: str = "short-term"
     ) -> None:
         """Save a memory entry into short-term or long-term memory."""
+        # Auto-tag with any active context ID from get_current_context or similar
+        ctx = get_current_context()
+        merged_metadata = dict(metadata) if metadata is not None else {}
+        if ctx and hasattr(ctx, "_data"):
+            # We can associate a context ID if present (using current active context if any)
+            # Some contexts may have a context id, or we look it up.
+            context_id = getattr(ctx, "id", None)
+            if context_id:
+                merged_metadata["context_id"] = context_id
+
         if category == "short-term":
-            self._short_term_memory.set(key, value)
+            self._short_term_memory.set(key, value, metadata=merged_metadata, ttl=ttl)
         elif category == "long-term":
-            self._long_term_memory.set(key, value)
+            self._long_term_memory.set(key, value, metadata=merged_metadata, ttl=ttl)
         else:
             raise ValueError(
                 f"Unsupported memory category: {category}. Support: 'short-term' or 'long-term'"
@@ -271,6 +306,10 @@ class YasinCoreClient:
     def load_plugin(self, name: str) -> None:
         """Load a registered plugin by name."""
         self._plugin_registry.load_plugin(name)
+
+    def unexport_plugin(self, name: str) -> None:
+        """Unload a loaded plugin by name."""
+        self._plugin_registry.unload_plugin(name)
 
     def unload_plugin(self, name: str) -> None:
         """Unload a loaded plugin by name."""
