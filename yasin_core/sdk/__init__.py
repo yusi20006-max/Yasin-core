@@ -37,6 +37,20 @@ from yasin_core.storage import (
     register_backend,
 )
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState, OrchestratorError
+from yasin_core.security import (
+    SecurityError,
+    AccessDeniedError,
+    AuthenticationError,
+    PermissionValidationError,
+    Permission,
+    Role,
+    Subject,
+    SecurityManager,
+    require_permission,
+    SECURITY_EVENT_AUDIT,
+    SECURITY_ACCESS_GRANTED,
+    SECURITY_ACCESS_DENIED,
+)
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -91,4 +105,16 @@ __all__ = [
     "StorageValidationError",
     "get_storage",
     "register_backend",
+    "SecurityError",
+    "AccessDeniedError",
+    "AuthenticationError",
+    "PermissionValidationError",
+    "Permission",
+    "Role",
+    "Subject",
+    "SecurityManager",
+    "require_permission",
+    "SECURITY_EVENT_AUDIT",
+    "SECURITY_ACCESS_GRANTED",
+    "SECURITY_ACCESS_DENIED",
 ]

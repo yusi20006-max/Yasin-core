@@ -13,6 +13,7 @@ from yasin_core.config import ConfigurationManager
 from yasin_core.storage.base import BaseStorage
 from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
+from yasin_core.security.manager import SecurityManager
 
 
 class YasinCoreClient:
@@ -44,6 +45,7 @@ class YasinCoreClient:
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
         self._orchestrator = RuntimeOrchestrator(self)
+        self._security_manager = SecurityManager(event_bus=self._event_bus)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (
@@ -104,6 +106,12 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("orchestrator", self._orchestrator)
 
+        # Register SecurityManager
+        self._di_container.register_instance(
+            SecurityManager, self._security_manager
+        )
+        self._di_container.register_instance("security_manager", self._security_manager)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="plugin_registry",
@@ -122,6 +130,12 @@ class YasinCoreClient:
             service=self._storage,
             version=self._version,
             description="Manages ecosystem storage services.",
+        )
+        self._service_registry.register_service(
+            name="security_manager",
+            service=self._security_manager,
+            version=self._version,
+            description="Manages system access control and auditing.",
         )
 
         # Register Memory services within RuntimeServiceRegistry
@@ -152,6 +166,11 @@ class YasinCoreClient:
     def config(self) -> ConfigurationManager:
         """Access the centralized Configuration Manager."""
         return self._config_manager
+
+    @property
+    def security(self) -> SecurityManager:
+        """Access the centralized Security & Permission Manager."""
+        return self._security_manager
 
     @property
     def registry(self) -> RuntimeServiceRegistry:
