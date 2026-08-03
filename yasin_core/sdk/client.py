@@ -26,6 +26,7 @@ class YasinCoreClient:
         di_container=None,
         config_manager=None,
         storage=None,
+        api_gateway=None,
     ):
         self._version = VERSION
         self._event_bus = EventBus()
@@ -67,6 +68,10 @@ class YasinCoreClient:
             else:
                 self._long_term_memory = InMemoryLongTermMemory()
 
+        # Initialize APIGateway
+        from yasin_core.api.gateway import APIGateway
+        self._api_gateway = api_gateway or APIGateway(self)
+
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
         self._di_container.register_instance("client", self)
@@ -104,6 +109,10 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("orchestrator", self._orchestrator)
 
+        # Register APIGateway
+        self._di_container.register_instance(APIGateway, self._api_gateway)
+        self._di_container.register_instance("api_gateway", self._api_gateway)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="plugin_registry",
@@ -138,6 +147,14 @@ class YasinCoreClient:
             description="Long-term semantic/persistent memory layer."
         )
 
+        # Register APIGateway service within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="api_gateway",
+            service=self._api_gateway,
+            version=self._version,
+            description="Unified public API Gateway interface."
+        )
+
     @property
     def di_container(self) -> DIContainer:
         """Access the centralized Dependency Injection Container."""
@@ -162,6 +179,11 @@ class YasinCoreClient:
     def orchestrator(self) -> RuntimeOrchestrator:
         """Access the Runtime Orchestrator."""
         return self._orchestrator
+
+    @property
+    def api_gateway(self):
+        """Access the centralized public API Gateway."""
+        return self._api_gateway
 
     def start(self) -> None:
         """Start the orchestrator."""
@@ -267,12 +289,9 @@ class YasinCoreClient:
         self, key: str, value: Any, category: str = "short-term", metadata: Optional[Dict[str, Any]] = None, ttl: Optional[int] = None
     ) -> None:
         """Save a memory entry into short-term or long-term memory."""
-        # Auto-tag with any active context ID from get_current_context or similar
         ctx = get_current_context()
         merged_metadata = dict(metadata) if metadata is not None else {}
         if ctx and hasattr(ctx, "_data"):
-            # We can associate a context ID if present (using current active context if any)
-            # Some contexts may have a context id, or we look it up.
             context_id = getattr(ctx, "id", None)
             if context_id:
                 merged_metadata["context_id"] = context_id

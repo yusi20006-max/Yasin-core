@@ -38,6 +38,17 @@ from yasin_core.storage import (
 )
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState, OrchestratorError
 
+# Import API Gateway components
+from yasin_core.api import (
+    APIRequest,
+    APIResponse,
+    APIError,
+    APIErrorCode,
+    BaseAuthenticator,
+    APIKeyAuthenticator,
+    APIGateway,
+)
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
@@ -91,4 +102,12 @@ __all__ = [
     "StorageValidationError",
     "get_storage",
     "register_backend",
+    # Exported API Gateway Elements
+    "APIRequest",
+    "APIResponse",
+    "APIError",
+    "APIErrorCode",
+    "BaseAuthenticator",
+    "APIKeyAuthenticator",
+    "APIGateway",
 ]
