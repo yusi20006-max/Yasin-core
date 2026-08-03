@@ -15,6 +15,9 @@ from yasin_core.di import (
     DependencyResolutionError,
     CircularDependencyError,
 )
+from yasin_core.memory.base import BaseMemory, ShortTermMemory, LongTermMemory, MemoryEntry
+from yasin_core.memory.in_memory import InMemoryShortTermMemory, InMemoryLongTermMemory
+from yasin_core.memory.persistent import StorageBackedLongTermMemory
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -57,4 +60,11 @@ __all__ = [
     "DIError",
     "DependencyResolutionError",
     "CircularDependencyError",
+    "BaseMemory",
+    "ShortTermMemory",
+    "LongTermMemory",
+    "MemoryEntry",
+    "InMemoryShortTermMemory",
+    "InMemoryLongTermMemory",
+    "StorageBackedLongTermMemory",
 ]

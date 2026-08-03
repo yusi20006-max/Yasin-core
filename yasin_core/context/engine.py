@@ -3,6 +3,7 @@ import threading
 from typing import Dict, Any, List, Optional
 from .manager import Context
 
+
 class RuntimeContext(Context):
     """
     Enhanced RuntimeContext subclassing the baseline Context class to preserve
@@ -157,4 +158,27 @@ class ContextEngine:
                     }
                     for cid, ctx in self._contexts.items()
                 }
+            }
+
+    # Context Engine Memory Integration
+    def retrieve_context_memories(self, context_id: str, client: Any) -> Dict[str, List[Any]]:
+        """
+        Query memory segments automatically associated with a given context ID.
+        Returns a dictionary grouping short-term and long-term memory entries.
+        """
+        with self._lock:
+            # Filter memories matching metadata {"context_id": context_id}
+            filter_dict = {"context_id": context_id}
+
+            st_memories = []
+            if hasattr(client, "short_term_memory"):
+                st_memories = client.short_term_memory.filter(filter_dict)
+
+            lt_memories = []
+            if hasattr(client, "long_term_memory"):
+                lt_memories = client.long_term_memory.filter(filter_dict)
+
+            return {
+                "short-term": [entry.to_dict() for entry in st_memories],
+                "long-term": [entry.to_dict() for entry in lt_memories]
             }
