@@ -10,11 +10,21 @@ from yasin_core.context.engine import ContextEngine
 from yasin_core.context.manager import get_current_context
 from yasin_core.di import DIContainer
 from yasin_core.config import ConfigurationManager
-from yasin_core.memory.base import BaseMemory, ShortTermMemory, LongTermMemory
+from yasin_core.storage.base import BaseStorage
 
 
 class YasinCoreClient:
-    def __init__(self, short_term_memory=None, long_term_memory=None, service_registry=None, context_engine=None, di_container=None, config_manager=None):
+
+    def __init__(
+        self,
+        short_term_memory=None,
+        long_term_memory=None,
+        service_registry=None,
+        context_engine=None,
+        di_container=None,
+        config_manager=None,
+        storage=None,
+    ):
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
@@ -32,41 +42,77 @@ class YasinCoreClient:
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
 
-        from yasin_core.memory import InMemoryShortTermMemory, InMemoryLongTermMemory
-        self._short_term_memory = short_term_memory or InMemoryShortTermMemory(event_bus=self._event_bus)
-        self._long_term_memory = long_term_memory or InMemoryLongTermMemory(event_bus=self._event_bus)
+        from yasin_core.storage.in_memory import InMemoryStorage
+        from yasin_core.memory import (
+            InMemoryShortTermMemory,
+            InMemoryLongTermMemory,
+            StorageBackedLongTermMemory,
+        )
+
+        self._storage = storage or InMemoryStorage()
+        # Initialize storage
+        self._storage.initialize()
+
+        self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
+        if long_term_memory is not None:
+            self._long_term_memory = long_term_memory
+        else:
+            if self._storage.metadata.get("persistent", False):
+                self._long_term_memory = StorageBackedLongTermMemory(
+                    self._storage
+                )
+            else:
+                self._long_term_memory = InMemoryLongTermMemory()
 
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
         self._di_container.register_instance("client", self)
-        self._di_container.register_instance(RuntimeServiceRegistry, self._service_registry)
-        self._di_container.register_instance("service_registry", self._service_registry)
-        self._di_container.register_instance(ContextEngine, self._context_engine)
-        self._di_container.register_instance("context_engine", self._context_engine)
+        self._di_container.register_instance(
+            RuntimeServiceRegistry, self._service_registry
+        )
+        self._di_container.register_instance(
+            "service_registry", self._service_registry
+        )
+        self._di_container.register_instance(
+            ContextEngine, self._context_engine
+        )
+        self._di_container.register_instance(
+            "context_engine", self._context_engine
+        )
         self._di_container.register_instance("event_bus", self._event_bus)
-        self._di_container.register_instance(PluginRegistry, self._plugin_registry)
-        self._di_container.register_instance("plugin_registry", self._plugin_registry)
-        self._di_container.register_instance(ConfigurationManager, self._config_manager)
+        self._di_container.register_instance(
+            PluginRegistry, self._plugin_registry
+        )
+        self._di_container.register_instance(
+            "plugin_registry", self._plugin_registry
+        )
+        self._di_container.register_instance(
+            ConfigurationManager, self._config_manager
+        )
         self._di_container.register_instance("config", self._config_manager)
 
-        # Register memory services in the DI Container
-        self._di_container.register_instance(ShortTermMemory, self._short_term_memory)
-        self._di_container.register_instance("short_term_memory", self._short_term_memory)
-        self._di_container.register_instance(LongTermMemory, self._long_term_memory)
-        self._di_container.register_instance("long_term_memory", self._long_term_memory)
+        # Register new storage instance
+        self._di_container.register_instance(BaseStorage, self._storage)
+        self._di_container.register_instance("storage", self._storage)
 
-        # Register PluginRegistry and ConfigurationManager within RuntimeServiceRegistry
+        # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="plugin_registry",
             service=self._plugin_registry,
             version=self._version,
-            description="Manages core and third-party plugin lifecycles."
+            description="Manages core and third-party plugin lifecycles.",
         )
         self._service_registry.register_service(
             name="config",
             service=self._config_manager,
             version=self._version,
-            description="Manages ecosystem configuration."
+            description="Manages ecosystem configuration.",
+        )
+        self._service_registry.register_service(
+            name="storage",
+            service=self._storage,
+            version=self._version,
+            description="Manages ecosystem storage services.",
         )
 
         # Register Memory services within RuntimeServiceRegistry
@@ -94,6 +140,11 @@ class YasinCoreClient:
         return self._config_manager
 
     @property
+    def storage(self) -> BaseStorage:
+        """Access the centralized Storage provider."""
+        return self._storage
+
+    @property
     def version(self) -> str:
         return self._version
 
@@ -104,10 +155,7 @@ class YasinCoreClient:
         return self.get_info()
 
     def get_info(self) -> dict:
-        return {
-            "name": "Yasin Core SDK Client",
-            "version": self._version
-        }
+        return {"name": "Yasin Core SDK Client", "version": self._version}
 
     @property
     def event_bus(self) -> EventBus:
@@ -160,7 +208,9 @@ class YasinCoreClient:
         self._agent_manager.stop_agents()
 
     # Task Operations
-    def create_task(self, id: str, name: str, input_data: Optional[Dict[str, Any]] = None) -> Task:
+    def create_task(
+        self, id: str, name: str, input_data: Optional[Dict[str, Any]] = None
+    ) -> Task:
         """Create a new Task instance."""
         return Task(id=id, name=name, input_data=input_data)
 
@@ -170,12 +220,7 @@ class YasinCoreClient:
 
     # Memory Operations
     def save_memory(
-        self,
-        key: str,
-        value: Any,
-        category: str = "short-term",
-        metadata: Optional[Dict[str, Any]] = None,
-        ttl: Optional[int] = None
+        self, key: str, value: Any, category: str = "short-term"
     ) -> None:
         """Save a memory entry into short-term or long-term memory."""
         # Auto-tag with any active context ID from get_current_context or similar
@@ -193,21 +238,28 @@ class YasinCoreClient:
         elif category == "long-term":
             self._long_term_memory.set(key, value, metadata=merged_metadata, ttl=ttl)
         else:
-            raise ValueError(f"Unsupported memory category: {category}. Support: 'short-term' or 'long-term'")
+            raise ValueError(
+                f"Unsupported memory category: {category}. Support: 'short-term' or 'long-term'"
+            )
 
-    def get_memory(self, key: str, default: Any = None, category: str = "short-term") -> Any:
+    def get_memory(
+        self, key: str, default: Any = None, category: str = "short-term"
+    ) -> Any:
         """Retrieve a memory entry from short-term or long-term memory."""
         if category == "short-term":
             return self._short_term_memory.get(key, default)
         elif category == "long-term":
             return self._long_term_memory.get(key, default)
         else:
-            raise ValueError(f"Unsupported memory category: {category}. Support: 'short-term' or 'long-term'")
+            raise ValueError(
+                f"Unsupported memory category: {category}. Support: 'short-term' or 'long-term'"
+            )
 
     # Context Operations
     def create_context(self, data: Optional[Dict[str, Any]] = None):
         """Create a new execution context."""
         from yasin_core.context import Context
+
         return Context(data)
 
     # Provider Operations
