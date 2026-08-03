@@ -13,6 +13,7 @@ from yasin_core.config import ConfigurationManager
 from yasin_core.storage.base import BaseStorage
 from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
+from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority
 
 
 class YasinCoreClient:
@@ -44,6 +45,7 @@ class YasinCoreClient:
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
         self._orchestrator = RuntimeOrchestrator(self)
+        self._execution = TaskExecutionEngine(self)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (
@@ -104,12 +106,25 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("orchestrator", self._orchestrator)
 
+        # Register TaskExecutionEngine
+        self._di_container.register_instance(
+            TaskExecutionEngine, self._execution
+        )
+        self._di_container.register_instance("execution", self._execution)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="plugin_registry",
             service=self._plugin_registry,
             version=self._version,
             description="Manages core and third-party plugin lifecycles.",
+        )
+        self._service_registry.register_service(
+            name="execution",
+            service=self._execution,
+            version=self._version,
+            description="Manages unified background task/job execution workflows.",
+            dependencies=["config"]
         )
         self._service_registry.register_service(
             name="config",
@@ -182,6 +197,11 @@ class YasinCoreClient:
     def status(self) -> Dict[str, Any]:
         """Check overall status report."""
         return self._orchestrator.status()
+
+    @property
+    def execution(self) -> TaskExecutionEngine:
+        """Access the centralized Task Execution Engine."""
+        return self._execution
 
     @property
     def storage(self) -> BaseStorage:
@@ -374,6 +394,40 @@ class YasinCoreClient:
     def get_plugin_status(self) -> Dict[str, Any]:
         """Retrieve status of the plugin registry and registered plugins."""
         return self._plugin_registry.status()
+
+    # Job/Task Execution Operations
+    def submit_job(self, job: Job) -> Job:
+        """Submit a job to the Task Execution Engine."""
+        return self._execution.submit_job(job)
+
+    def create_job(
+        self,
+        target: Any,
+        args: Optional[tuple] = None,
+        kwargs: Optional[dict] = None,
+        name: Optional[str] = None,
+        priority: int = 20,
+        retries: int = 0,
+        timeout: Optional[float] = None,
+    ) -> Job:
+        """Create and submit a job to the Task Execution Engine."""
+        return self._execution.create_job(
+            target=target,
+            args=args,
+            kwargs=kwargs,
+            name=name,
+            priority=priority,
+            retries=retries,
+            timeout=timeout,
+        )
+
+    def get_job(self, job_id: str) -> Optional[Job]:
+        """Retrieve a registered job by ID."""
+        return self._execution.get_job(job_id)
+
+    def cancel_job(self, job_id: str) -> bool:
+        """Cancel a pending or running job."""
+        return self._execution.cancel_job(job_id)
 
     # Tool Operations
     def register_tool(self, tool: BaseTool) -> None:
