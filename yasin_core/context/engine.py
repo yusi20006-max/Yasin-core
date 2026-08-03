@@ -2,6 +2,8 @@ import uuid
 import threading
 from typing import Dict, Any, List, Optional
 from .manager import Context
+from yasin_core.storage.base import BaseStorage
+
 
 class RuntimeContext(Context):
     """
@@ -9,13 +11,14 @@ class RuntimeContext(Context):
     backward compatibility while adding unique identification, parent-child inheritance/propagation,
     custom metadata, and serialization.
     """
+
     def __init__(
         self,
         context_id: Optional[str] = None,
         parent_id: Optional[str] = None,
         data: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        engine: Optional["ContextEngine"] = None
+        engine: Optional["ContextEngine"] = None,
     ):
         super().__init__(data)
         self.id = context_id or str(uuid.uuid4())
@@ -53,11 +56,13 @@ class RuntimeContext(Context):
             "parent_id": self.parent_id,
             "metadata": self.metadata,
             "data": self.to_dict(),
-            "active": self._active
+            "active": self._active,
         }
 
     @classmethod
-    def deserialize(cls, payload: Dict[str, Any], engine: Optional["ContextEngine"] = None) -> "RuntimeContext":
+    def deserialize(
+        cls, payload: Dict[str, Any], engine: Optional["ContextEngine"] = None
+    ) -> "RuntimeContext":
         """
         Deserialize dictionary back to a RuntimeContext instance.
         """
@@ -66,7 +71,7 @@ class RuntimeContext(Context):
             parent_id=payload.get("parent_id"),
             data=payload.get("data"),
             metadata=payload.get("metadata"),
-            engine=engine
+            engine=engine,
         )
         ctx._active = payload.get("active", True)
         return ctx
@@ -77,6 +82,7 @@ class ContextEngine:
     Centralized, thread-safe Context Engine responsible for managing the lifecycle,
     lookup, propagation, isolation, and serialization of runtime contexts across the ecosystem.
     """
+
     def __init__(self):
         self._lock = threading.RLock()
         self._contexts: Dict[str, RuntimeContext] = {}
@@ -85,7 +91,7 @@ class ContextEngine:
         self,
         data: Optional[Dict[str, Any]] = None,
         parent_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> RuntimeContext:
         """
         Create and track a new thread-safe RuntimeContext.
@@ -93,10 +99,7 @@ class ContextEngine:
         with self._lock:
             # If parent_id is specified, verify it exists (optional but good practice)
             ctx = RuntimeContext(
-                parent_id=parent_id,
-                data=data,
-                metadata=metadata,
-                engine=self
+                parent_id=parent_id, data=data, metadata=metadata, engine=self
             )
             self._contexts[ctx.id] = ctx
             return ctx
@@ -153,8 +156,58 @@ class ContextEngine:
                     cid: {
                         "parent_id": ctx.parent_id,
                         "metadata": ctx.metadata,
-                        "active": ctx.active
+                        "active": ctx.active,
                     }
                     for cid, ctx in self._contexts.items()
-                }
+                },
             }
+
+    def save_context_to_storage(
+        self, context_id: str, storage: BaseStorage, key_prefix: str = "context:"
+    ) -> None:
+        """
+        Save a single runtime context to storage thread-safely.
+        """
+        with self._lock:
+            ctx = self.get_context(context_id)
+            if ctx:
+                storage.set(f"{key_prefix}{context_id}", ctx.serialize())
+
+    def load_context_from_storage(
+        self, context_id: str, storage: BaseStorage, key_prefix: str = "context:"
+    ) -> Optional[RuntimeContext]:
+        """
+        Load and register a single runtime context from storage thread-safely.
+        """
+        with self._lock:
+            payload = storage.get(f"{key_prefix}{context_id}")
+            if payload:
+                ctx = RuntimeContext.deserialize(payload, engine=self)
+                self._contexts[ctx.id] = ctx
+                return ctx
+            return None
+
+    def save_all_contexts_to_storage(
+        self, storage: BaseStorage, key_prefix: str = "contexts"
+    ) -> None:
+        """
+        Save all managed contexts to storage as a dictionary.
+        """
+        with self._lock:
+            serialized = {
+                cid: ctx.serialize() for cid, ctx in self._contexts.items()
+            }
+            storage.set(key_prefix, serialized)
+
+    def load_all_contexts_from_storage(
+        self, storage: BaseStorage, key_prefix: str = "contexts"
+    ) -> None:
+        """
+        Load and merge all contexts from storage thread-safely.
+        """
+        with self._lock:
+            payload = storage.get(key_prefix)
+            if payload and isinstance(payload, dict):
+                for cid, ctx_payload in payload.items():
+                    ctx = RuntimeContext.deserialize(ctx_payload, engine=self)
+                    self._contexts[cid] = ctx
