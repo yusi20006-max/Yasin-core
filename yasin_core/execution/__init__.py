@@ -1,5 +1,6 @@
 from .models import Job, ExecutionTask, JobStatus, JobPriority
 from .engine import TaskExecutionEngine
+from .scheduler import Scheduler, ScheduledJob
 
 __all__ = [
     "Job",
@@ -7,4 +8,6 @@ __all__ = [
     "JobStatus",
     "JobPriority",
     "TaskExecutionEngine",
+    "Scheduler",
+    "ScheduledJob",
 ]
