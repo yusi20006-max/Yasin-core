@@ -106,7 +106,14 @@ class RuntimeOrchestrator:
 
     def stop(self) -> None:
         """
-        Coordinates the shutdown sequence, shutting down services in reverse order.
+        Shut down the runtime and its registered services.
+        
+        Already stopped or uninitialized runtimes are left unchanged. Service shutdown
+        failures or services that remain active cause the runtime to enter the failed
+        state and raise an ``OrchestratorError``.
+        
+        Raises:
+            OrchestratorError: If the shutdown sequence fails.
         """
         with self._lock:
             if self._state in (RuntimeState.STOPPED, RuntimeState.UNINITIALIZED):
@@ -126,6 +133,14 @@ class RuntimeOrchestrator:
                     for name, info in services_info.items():
                         if name != "services" and isinstance(info, dict) and str(info.get("state")).upper() == "ACTIVE":
                             raise OrchestratorError(f"Service '{name}' failed to stop (remains active).")
+
+                # Cleanly shutdown event bus executor
+                if hasattr(self.runtime, "event_bus") and self.runtime.event_bus:
+                    if hasattr(self.runtime.event_bus, "shutdown"):
+                        try:
+                            self.runtime.event_bus.shutdown()
+                        except Exception as e:
+                            self.logger.warning(f"Failed to shutdown event bus executor: {e}")
 
                 self._stop_time = time.time()
                 self._transition_to(RuntimeState.STOPPED)
