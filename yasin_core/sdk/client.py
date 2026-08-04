@@ -15,6 +15,8 @@ from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
 from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority, Scheduler, ScheduledJob
 from yasin_core.security.manager import SecurityManager
+from yasin_core.observability import ObservabilityService
+from yasin_core.execution.distributed import DistributedWorkerManager
 
 
 class YasinCoreClient:
@@ -60,8 +62,9 @@ class YasinCoreClient:
         self._config_manager = config_manager or ConfigurationManager()
         self._observability = ObservabilityService(self)
         self._execution = TaskExecutionEngine(self)
+        self._scheduler = Scheduler(self)
+        self._worker_manager = DistributedWorkerManager(self)
         self._orchestrator = RuntimeOrchestrator(self)
-        self._execution = TaskExecutionEngine(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
 
         from yasin_core.storage.in_memory import InMemoryStorage
@@ -141,6 +144,12 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("execution", self._execution)
 
+        # Register DistributedWorkerManager
+        self._di_container.register_instance(
+            DistributedWorkerManager, self._worker_manager
+        )
+        self._di_container.register_instance("worker_manager", self._worker_manager)
+
         # Register SecurityManager
         self._di_container.register_instance(
             SecurityManager, self._security_manager
@@ -216,6 +225,13 @@ class YasinCoreClient:
             description="Manages scheduled and recurring background jobs.",
             dependencies=["execution", "storage"]
         )
+        self._service_registry.register_service(
+            name="worker_manager",
+            service=self._worker_manager,
+            version=self._version,
+            description="Manages distributed worker nodes, heartbeats, and task routing.",
+            dependencies=["config"]
+        )
 
     @property
     def observability(self) -> ObservabilityService:
@@ -281,6 +297,11 @@ class YasinCoreClient:
     def execution(self) -> TaskExecutionEngine:
         """Access the centralized Task Execution Engine."""
         return self._execution
+
+    @property
+    def worker_manager(self) -> DistributedWorkerManager:
+        """Access the centralized Distributed Worker Manager."""
+        return self._worker_manager
 
     @property
     def scheduler(self) -> Scheduler:
