@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union, Callable
 from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
 from yasin_core.providers import AIProvider, ProviderManager
@@ -13,7 +13,8 @@ from yasin_core.config import ConfigurationManager
 from yasin_core.storage.base import BaseStorage
 from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
-from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority
+from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority, Scheduler, ScheduledJob
+from yasin_core.security.manager import SecurityManager
 
 
 class YasinCoreClient:
@@ -46,6 +47,8 @@ class YasinCoreClient:
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
         self._orchestrator = RuntimeOrchestrator(self)
+        self._execution = TaskExecutionEngine(self)
+        self._scheduler = Scheduler(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
 
         from yasin_core.storage.in_memory import InMemoryStorage
@@ -117,6 +120,14 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("execution", self._execution)
 
+        # Register APIGateway
+        self._di_container.register_instance(APIGateway, self._api_gateway)
+        self._di_container.register_instance("api_gateway", self._api_gateway)
+
+        # Register Scheduler
+        self._di_container.register_instance(Scheduler, self._scheduler)
+        self._di_container.register_instance("scheduler", self._scheduler)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="plugin_registry",
@@ -170,6 +181,15 @@ class YasinCoreClient:
             service=self._api_gateway,
             version=self._version,
             description="Unified public API Gateway interface."
+        )
+
+        # Register Scheduler service within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="scheduler",
+            service=self._scheduler,
+            version=self._version,
+            description="Manages scheduled and recurring background jobs.",
+            dependencies=["execution", "storage"]
         )
 
     @property
@@ -231,6 +251,11 @@ class YasinCoreClient:
     def execution(self) -> TaskExecutionEngine:
         """Access the centralized Task Execution Engine."""
         return self._execution
+
+    @property
+    def scheduler(self) -> Scheduler:
+        """Access the centralized Scheduler."""
+        return self._scheduler
 
     @property
     def storage(self) -> BaseStorage:
@@ -425,6 +450,37 @@ class YasinCoreClient:
     def submit_job(self, job: Job) -> Job:
         """Submit a job to the Task Execution Engine."""
         return self._execution.submit_job(job)
+
+    def schedule_job(
+        self,
+        target: Union[Callable, str],
+        args: Optional[tuple] = None,
+        kwargs: Optional[dict] = None,
+        id: Optional[str] = None,
+        name: Optional[str] = None,
+        priority: Union[int, JobPriority] = JobPriority.NORMAL,
+        retries: int = 0,
+        timeout: Optional[float] = None,
+        interval: Optional[float] = None,
+        delay: Optional[float] = None,
+        cron: Optional[str] = None,
+        max_runs: Optional[int] = None,
+    ) -> ScheduledJob:
+        """Schedule a job with the centralized Scheduler."""
+        return self._scheduler.schedule_job(
+            target=target,
+            args=args,
+            kwargs=kwargs,
+            id=id,
+            name=name,
+            priority=priority,
+            retries=retries,
+            timeout=timeout,
+            interval=interval,
+            delay=delay,
+            cron=cron,
+            max_runs=max_runs,
+        )
 
     def create_job(
         self,

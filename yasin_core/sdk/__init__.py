@@ -37,7 +37,7 @@ from yasin_core.storage import (
     register_backend,
 )
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState, OrchestratorError
-from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine
+from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine, Scheduler, ScheduledJob
 
 # Import API Gateway components
 from yasin_core.api import (
@@ -122,4 +122,6 @@ __all__ = [
     "JobStatus",
     "JobPriority",
     "TaskExecutionEngine",
+    "Scheduler",
+    "ScheduledJob",
 ]
