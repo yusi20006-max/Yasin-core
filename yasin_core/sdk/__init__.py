@@ -50,6 +50,30 @@ from yasin_core.api import (
     APIGateway,
 )
 
+# Import Security components
+from yasin_core.security import (
+    SecurityError,
+    AccessDeniedError,
+    AuthenticationError,
+    PermissionValidationError,
+    Permission,
+    Role,
+    Subject,
+    BasePolicy,
+    DefaultRBACPolicy,
+    PolicyEngine,
+    ConfigurationSecurityValidator,
+    SensitiveDataProtector,
+    BaseCredentialStore,
+    InMemoryCredentialStore,
+    AuditLogger,
+    SECURITY_EVENT_AUDIT,
+    SECURITY_ACCESS_GRANTED,
+    SECURITY_ACCESS_DENIED,
+    SecurityManager,
+    require_permission,
+)
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
@@ -122,4 +146,25 @@ __all__ = [
     "JobStatus",
     "JobPriority",
     "TaskExecutionEngine",
+    # Security components
+    "SecurityError",
+    "AccessDeniedError",
+    "AuthenticationError",
+    "PermissionValidationError",
+    "Permission",
+    "Role",
+    "Subject",
+    "BasePolicy",
+    "DefaultRBACPolicy",
+    "PolicyEngine",
+    "ConfigurationSecurityValidator",
+    "SensitiveDataProtector",
+    "BaseCredentialStore",
+    "InMemoryCredentialStore",
+    "AuditLogger",
+    "SECURITY_EVENT_AUDIT",
+    "SECURITY_ACCESS_GRANTED",
+    "SECURITY_ACCESS_DENIED",
+    "SecurityManager",
+    "require_permission",
 ]

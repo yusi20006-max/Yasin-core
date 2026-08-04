@@ -14,6 +14,7 @@ from yasin_core.storage.base import BaseStorage
 from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
 from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority
+from yasin_core.security import SecurityManager
 
 
 class YasinCoreClient:
@@ -46,6 +47,7 @@ class YasinCoreClient:
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
         self._orchestrator = RuntimeOrchestrator(self)
+        self._execution = TaskExecutionEngine(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
 
         from yasin_core.storage.in_memory import InMemoryStorage
@@ -73,6 +75,8 @@ class YasinCoreClient:
         # Initialize APIGateway
         from yasin_core.api.gateway import APIGateway
         self._api_gateway = api_gateway or APIGateway(self)
+        self._di_container.register_instance(APIGateway, self._api_gateway)
+        self._di_container.register_instance("api_gateway", self._api_gateway)
 
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
@@ -116,6 +120,12 @@ class YasinCoreClient:
             TaskExecutionEngine, self._execution
         )
         self._di_container.register_instance("execution", self._execution)
+
+        # Register SecurityManager
+        self._di_container.register_instance(
+            SecurityManager, self._security_manager
+        )
+        self._di_container.register_instance("security_manager", self._security_manager)
 
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
