@@ -57,6 +57,7 @@ class Job:
         self._completed_at = None
         self._context_id = context_id
         self._cancelled = False
+        self._worker_id = kwargs.get("worker_id") if kwargs else None
 
     @property
     def id(self) -> str:
@@ -174,6 +175,16 @@ class Job:
             self._context_id = val
 
     @property
+    def worker_id(self) -> Optional[str]:
+        with self._lock:
+            return self._worker_id
+
+    @worker_id.setter
+    def worker_id(self, val: Optional[str]) -> None:
+        with self._lock:
+            self._worker_id = val
+
+    @property
     def cancelled(self) -> bool:
         with self._lock:
             return self._cancelled
@@ -211,6 +222,7 @@ class Job:
                 "completed_at": self._completed_at,
                 "context_id": self._context_id,
                 "cancelled": self._cancelled,
+                "worker_id": self._worker_id,
             }
 
 
