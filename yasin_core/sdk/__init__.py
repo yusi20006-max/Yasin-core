@@ -6,6 +6,7 @@ from yasin_core.config import (
 )
 from yasin_core.agents.base import BaseAgent
 from yasin_core.agents.task import Task
+from yasin_core.agents.runtime import IAgentRuntime, AgentRuntime
 from yasin_core.context.manager import active_context, get_current_context
 from yasin_core.context.engine import RuntimeContext, ContextEngine
 from yasin_core.plugins.bridge import PluginExecutionBridge
@@ -171,6 +172,8 @@ __all__ = [
     "Settings",
     "BaseAgent",
     "Task",
+    "IAgentRuntime",
+    "AgentRuntime",
     "active_context",
     "get_current_context",
     "RuntimeContext",

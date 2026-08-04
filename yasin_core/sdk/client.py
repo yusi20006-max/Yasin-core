@@ -59,6 +59,10 @@ class YasinCoreClient:
         self._agent_manager.event_bus = self._event_bus
         self._executor.event_bus = self._event_bus
 
+        # Instantiate official AgentRuntime service
+        from yasin_core.agents.runtime import AgentRuntime
+        self._agent_runtime = AgentRuntime(self)
+
         self._plugin_registry = PluginRegistry(event_bus=self._event_bus)
         self._provider_manager = ProviderManager(client=self)
         self._tool_manager = ToolManager()
@@ -166,6 +170,12 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("security_manager", self._security_manager)
 
+        # Register AgentRuntime
+        self._di_container.register_instance(
+            AgentRuntime, self._agent_runtime
+        )
+        self._di_container.register_instance("agent_runtime", self._agent_runtime)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="providers",
@@ -210,6 +220,13 @@ class YasinCoreClient:
             service=self._security_manager,
             version=self._version,
             description="Manages system access control and auditing.",
+        )
+        self._service_registry.register_service(
+            name="agent_runtime",
+            service=self._agent_runtime,
+            version=self._version,
+            description="Central official Agent Runtime integration layer service.",
+            dependencies=["config", "storage", "security_manager"]
         )
 
         # Register Memory services within RuntimeServiceRegistry
@@ -279,6 +296,11 @@ class YasinCoreClient:
     def security(self) -> SecurityManager:
         """Access the centralized Security & Permission Manager."""
         return self._security_manager
+
+    @property
+    def agent_runtime(self) -> Any:
+        """Access the centralized Agent Runtime integration layer."""
+        return self._agent_runtime
 
     @property
     def registry(self) -> RuntimeServiceRegistry:
@@ -375,28 +397,28 @@ class YasinCoreClient:
 
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
-        """Register a new agent with the internal AgentManager."""
-        self._agent_manager.register_agent(agent)
+        """Register a new agent with the internal AgentRuntime."""
+        self._agent_runtime.register_agent(agent)
 
     def get_agent(self, name: str) -> Optional[BaseAgent]:
         """Retrieve a registered agent by name."""
-        return self._agent_manager.get_agent(name)
+        return self._agent_runtime.get_agent(name)
 
     def remove_agent(self, name: str) -> Optional[BaseAgent]:
         """Remove a registered agent by name."""
-        return self._agent_manager.remove_agent(name)
+        return self._agent_runtime.remove_agent(name)
 
     def list_agents(self) -> List[str]:
         """List names of all registered agents."""
-        return self._agent_manager.list_agents()
+        return self._agent_runtime.list_agents()
 
     def start_agents(self) -> None:
         """Start all registered agents."""
-        self._agent_manager.start_agents()
+        self._agent_runtime.start_agents()
 
     def stop_agents(self) -> None:
         """Stop all registered agents."""
-        self._agent_manager.stop_agents()
+        self._agent_runtime.stop_agents()
 
     # Task Operations
     def create_task(
@@ -406,8 +428,8 @@ class YasinCoreClient:
         return Task(id=id, name=name, input_data=input_data)
 
     def execute_task(self, task: Task) -> Task:
-        """Execute the task using the internal TaskExecutor."""
-        return self._executor.execute_task(task)
+        """Execute the task using the internal AgentRuntime."""
+        return self._agent_runtime.execute_agent_task(task)
 
     # Memory Operations
     def save_memory(
