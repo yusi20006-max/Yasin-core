@@ -54,7 +54,7 @@ from yasin_core.observability import (
     get_structured_logger,
     ObservabilityService,
 )
-from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine
+from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine, Scheduler, ScheduledJob
 
 # Import API Gateway components
 from yasin_core.api import (
@@ -178,6 +178,8 @@ __all__ = [
     "JobStatus",
     "JobPriority",
     "TaskExecutionEngine",
+    "Scheduler",
+    "ScheduledJob",
     # Security components
     "SecurityError",
     "AccessDeniedError",

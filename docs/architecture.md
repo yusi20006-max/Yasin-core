@@ -290,17 +290,23 @@ The **Context Engine** is a centralized, thread-safe context management system t
    The engine creates and tracks isolated `RuntimeContext` instances. Each context is assigned a unique ID (UUID format) to ensure absolute uniqueness across concurrent threads.
 
 2. **Hierarchical Propagation (Parent-Child Fallback)**:
-   Contexts can be created as children of existing contexts. If a key is requested from a child context but not found locally, the query automatically propagates/falls back to the parent context.
+   Contexts can be created as children of existing contexts. If a key is requested from a child context but not found locally, the query automatically propagates/falls back to the parent context. This is highly useful for multi-agent workflows.
 
-3. **Lifecycle Management**:
-   The engine tracks and manages the active/inactive state of contexts. Deleting a context deactivates it and removes it from active tracking.
+3. **Lifecycle & Expiration Management**:
+   The engine tracks and manages the active/inactive state of contexts. It supports dynamic TTL expiration and automated context pruning, ensuring short-term contexts are cleaned up automatically.
 
-4. **Serialization and Deserialization**:
-   Supports native dictionary-based serialization (`serialize()`) and deserialization (`deserialize()`) of context states (ID, Parent ID, Data payload, Metadata, Active state), facilitating state persistence and cross-network propagation.
+4. **Metadata & Tag Filtering**:
+   Built-in metadata support with timestamps (`created_at`, `updated_at`, `expires_at`) and tag list definitions. Supports listing and filtering contexts by tags for advanced lookup and auditing.
 
-5. **Runtime and SDK Integration**:
+5. **Event Bus Integration**:
+   Ecosystem-wide lifecycle notifications are automatically published on the Event Bus during context operations, including `context_created`, `context_updated`, `context_deleted`, and `context_expired` events.
+
+6. **Serialization and Deserialization**:
+   Supports native dictionary-based serialization (`serialize()`) and deserialization (`deserialize()`) of context states (ID, Parent ID, Data payload, Metadata, Active state, TTL, Tags, and Timestamps), facilitating state persistence and cross-network propagation.
+
+7. **Runtime and SDK Integration**:
    - **`YasinRuntime`**: Integrates a dedicated `ContextEngine` into the core runtime, exposing the context status in the overall runtime status report.
-   - **`YasinCoreClient`**: Exposes the context engine directly through the public SDK interface (`client.context_engine`).
+   - **`YasinCoreClient`**: Exposes the context engine directly through the public SDK interface (`client.context_engine`) and convenient SDK context wrapper methods.
 
 ### Usage Example
 
@@ -316,16 +322,26 @@ parent_ctx = client.context_engine.create_context(
     metadata={"owner": "platform-team"}
 )
 
-# Create a Child Context with local overrides and parent linkage
+# Create a Child Context with local overrides, parent linkage, custom TTL (seconds), and tags
 child_ctx = client.context_engine.create_context(
     data={"debug": True, "task_id": "999"},
-    parent_id=parent_ctx.id
+    parent_id=parent_ctx.id,
+    ttl=3600,
+    tags=["workflow", "database"]
 )
 
 # Fallback/Propagation check
 print(child_ctx.get("env"))       # Returns "production" (falls back to parent)
 print(child_ctx.get("debug"))     # Returns True (retrieved from local override)
 print(child_ctx.get("task_id"))   # Returns "999" (retrieved from local)
+
+# Update data & metadata
+client.update_context_data(child_ctx.id, {"connection_limit": 50})
+client.update_context_metadata(child_ctx.id, {"tier": "backend"})
+
+# Check context tags and expiration state
+print(child_ctx.tags)             # ["workflow", "database"]
+print(child_ctx.is_expired())     # False (will automatically turn True after 1 hour)
 
 # Serialization
 payload = child_ctx.serialize()

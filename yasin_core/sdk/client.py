@@ -6,7 +6,7 @@ from yasin_core.events import EventBus
 from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
 from yasin_core.runtime.registry import RuntimeServiceRegistry
-from yasin_core.context.engine import ContextEngine
+from yasin_core.context.engine import ContextEngine, RuntimeContext
 from yasin_core.context.manager import get_current_context
 from yasin_core.di import DIContainer
 from yasin_core.config import ConfigurationManager
@@ -15,6 +15,7 @@ from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
 from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority, Scheduler, ScheduledJob
 from yasin_core.security.manager import SecurityManager
+from yasin_core.observability import ObservabilityService
 
 
 class YasinCoreClient:
@@ -55,14 +56,14 @@ class YasinCoreClient:
         self._provider_manager = ProviderManager()
         self._tool_manager = ToolManager()
         self._service_registry = service_registry or RuntimeServiceRegistry()
-        self._context_engine = context_engine or ContextEngine()
+        self._context_engine = context_engine or ContextEngine(event_bus=self._event_bus)
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
         self._observability = ObservabilityService(self)
         self._execution = TaskExecutionEngine(self)
         self._orchestrator = RuntimeOrchestrator(self)
-        self._execution = TaskExecutionEngine(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
+        self._scheduler = Scheduler(self)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (
@@ -146,6 +147,10 @@ class YasinCoreClient:
             SecurityManager, self._security_manager
         )
         self._di_container.register_instance("security_manager", self._security_manager)
+
+        # Register Scheduler
+        self._di_container.register_instance(Scheduler, self._scheduler)
+        self._di_container.register_instance("scheduler", self._scheduler)
 
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
@@ -401,11 +406,58 @@ class YasinCoreClient:
             )
 
     # Context Operations
-    def create_context(self, data: Optional[Dict[str, Any]] = None):
-        """Create a new execution context."""
-        from yasin_core.context import Context
+    def create_context(
+        self,
+        data: Optional[Dict[str, Any]] = None,
+        parent_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        ttl: Optional[Union[int, float]] = None,
+        tags: Optional[List[str]] = None,
+    ) -> RuntimeContext:
+        """Create a new execution context managed by ContextEngine."""
+        return self._context_engine.create_context(
+            data=data,
+            parent_id=parent_id,
+            metadata=metadata,
+            ttl=ttl,
+            tags=tags,
+        )
 
-        return Context(data)
+    def get_context(self, context_id: str) -> Optional[RuntimeContext]:
+        """Retrieve context by ID thread-safely."""
+        return self._context_engine.get_context(context_id)
+
+    def delete_context(self, context_id: str) -> None:
+        """Delete and deactivate context by ID thread-safely."""
+        self._context_engine.delete_context(context_id)
+
+    def list_contexts(self, active_only: bool = True, tags: Optional[List[str]] = None) -> List[str]:
+        """List registered context IDs, optionally filtering by tags and active state."""
+        return self._context_engine.list_contexts(active_only=active_only, tags=tags)
+
+    def update_context_data(self, context_id: str, data: Dict[str, Any]) -> Optional[RuntimeContext]:
+        """Update context data dictionary by merging new values thread-safely."""
+        return self._context_engine.update_context_data(context_id, data)
+
+    def update_context_metadata(self, context_id: str, metadata: Dict[str, Any]) -> Optional[RuntimeContext]:
+        """Update context metadata dictionary by merging new values thread-safely."""
+        return self._context_engine.update_context_metadata(context_id, metadata)
+
+    def add_tags_to_context(self, context_id: str, tags: List[str]) -> Optional[RuntimeContext]:
+        """Add tags to a context thread-safely."""
+        return self._context_engine.add_tags(context_id, tags)
+
+    def save_context_to_storage(self, context_id: str, key_prefix: str = "context:") -> None:
+        """Save a single runtime context to storage thread-safely."""
+        self._context_engine.save_context_to_storage(context_id, self._storage, key_prefix)
+
+    def load_context_from_storage(self, context_id: str, key_prefix: str = "context:") -> Optional[RuntimeContext]:
+        """Load and register a single runtime context from storage thread-safely."""
+        return self._context_engine.load_context_from_storage(context_id, self._storage, key_prefix)
+
+    def retrieve_context_memories(self, context_id: str) -> Dict[str, List[Dict[str, Any]]]:
+        """Retrieve memories belonging to the specified context ID."""
+        return self._context_engine.retrieve_context_memories(context_id, self)
 
     # Provider Operations
     def register_provider(self, provider: AIProvider) -> None:
