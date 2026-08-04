@@ -244,7 +244,7 @@ class YasinCoreClient(ISDKClient):
         self._worker_manager = DistributedWorkerManager(self)
         self._orchestrator = RuntimeOrchestrator(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
-        self._scheduler = Scheduler(self)
+        self._compatibility = CompatibilityManager(self)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (

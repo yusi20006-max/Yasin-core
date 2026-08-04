@@ -131,6 +131,30 @@ from .interfaces import ISDKClient, ISDKAuthenticator
 from .compat import SDKVersionChecker, deprecated, SDKMigrationHelper
 from .async_client import AsyncYasinCoreClient
 
+# Import Compatibility Framework components
+from yasin_core.compatibility import (
+    CompatibilityError,
+    VersionMismatchError,
+    APICompatibilityError,
+    MigrationError,
+    EcosystemValidationError,
+    Version,
+    is_compatible,
+    VersionNegotiator,
+    APICompatibilityChecker,
+    DeprecationManager,
+    LegacyAPIAdapter,
+    SchemaMigrator,
+    ConfigurationMigrator,
+    DataMigrator,
+    AgentCompatibilityValidator,
+    HubCompatibilityValidator,
+    RelayCompatibilityValidator,
+    CLICompatibilityValidator,
+    RuntimeCompatibilityChecker,
+    CompatibilityManager,
+)
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
@@ -277,4 +301,25 @@ __all__ = [
     "deprecated",
     "SDKMigrationHelper",
     "AsyncYasinCoreClient",
+    # Compatibility Framework exports
+    "CompatibilityError",
+    "VersionMismatchError",
+    "APICompatibilityError",
+    "MigrationError",
+    "EcosystemValidationError",
+    "Version",
+    "is_compatible",
+    "VersionNegotiator",
+    "APICompatibilityChecker",
+    "DeprecationManager",
+    "LegacyAPIAdapter",
+    "SchemaMigrator",
+    "ConfigurationMigrator",
+    "DataMigrator",
+    "AgentCompatibilityValidator",
+    "HubCompatibilityValidator",
+    "RelayCompatibilityValidator",
+    "CLICompatibilityValidator",
+    "RuntimeCompatibilityChecker",
+    "CompatibilityManager",
 ]
