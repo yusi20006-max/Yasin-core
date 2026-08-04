@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [3.0.0] - 2025-02-23
+## [3.3.0] - 2025-02-23
 
 ### Added
 - **Official Agent Runtime Integration Layer (v3.0)**: Centralized and thread-safe registration, dynamic discovery via name and tag capability matching, execution queues, state persistence, context management, and security validation.
@@ -18,12 +18,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Observability & Metrics System (v2.4)**: Thread-safe counters, gauges, histograms, structured JSON formatting, error tracker, performance timers, and non-blocking metric gathering.
 - **Unified Public SDK v2 (v3.1)**: Exposes API groupings (`agents`, `tasks`, `memory`, `context`, `tools`) under a client `.v2` property while retaining full backward compatibility.
 - **API Gateway Layer (v2.2)**: Extensible API Gateway, request models, standardized responses, and WSGI wrapper support.
+3.3.0 -m "Yasin-Core v3.3.0"
+git push origin main
+git push origin v3.3.0
 - **Plugin System Core Foundation (v1.6)**: Fully isolated lifecycle states with circular dependency validation, file discovery, and Agent runtime bridge.
 
 ### Fixed
 - Fixed an initialization bug in the SDK client `YasinCoreClient` where `self._compatibility` was referenced but never constructed.
 - Aligned SDK-level and compatibility-level `@deprecated` decorators to support both keyword parameter formats (`since`/`instead` vs `replaced_by`) within a single unified implementation.
 - Standardized `Event` model dictionary subclassing to prevent regression with primitive legacy tests.
+
+### Release Alignment
+- Standardized release metadata around the production-hardened `3.3.0` line.
+- Aligned version signaling across runtime, audit documentation, and release-facing project documents.
 
 ---
 
