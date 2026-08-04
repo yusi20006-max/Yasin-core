@@ -46,7 +46,7 @@ class DependentPlugin(YasinPlugin):
     name = "dependent"
     version = "2.0.0"
     dependencies = ["dummy"]
-    core_version_compat = "^1.5.0"
+    core_version_compat = ">=1.5.0"
 
     def __init__(self):
         self.started = False

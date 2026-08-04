@@ -116,30 +116,20 @@ from yasin_core.security import (
     require_permission,
 )
 
-# Import Compatibility Framework
-from yasin_core.compatibility import (
-    CompatibilityError,
-    VersionMismatchError,
-    APICompatibilityError,
-    MigrationError,
-    EcosystemValidationError,
-    Version,
-    is_compatible,
-    VersionNegotiator,
-    APICompatibilityChecker,
-    DeprecationManager,
-    deprecated,
-    LegacyAPIAdapter,
-    SchemaMigrator,
-    ConfigurationMigrator,
-    DataMigrator,
-    AgentCompatibilityValidator,
-    HubCompatibilityValidator,
-    RelayCompatibilityValidator,
-    CLICompatibilityValidator,
-    RuntimeCompatibilityChecker,
-    CompatibilityManager,
+# Import SDK v2 Components
+from .errors import (
+    SDKError,
+    SDKValidationError,
+    SDKAuthenticationError,
+    SDKConnectionError,
+    SDKExecutionError,
+    SDKDeprecationWarning,
+    translate_core_errors,
 )
+from .models import SDKRequest, SDKResponse
+from .interfaces import ISDKClient, ISDKAuthenticator
+from .compat import SDKVersionChecker, deprecated, SDKMigrationHelper
+from .async_client import AsyncYasinCoreClient
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -271,26 +261,20 @@ __all__ = [
     "SECURITY_ACCESS_DENIED",
     "SecurityManager",
     "require_permission",
-    # Compatibility framework exports
-    "CompatibilityError",
-    "VersionMismatchError",
-    "APICompatibilityError",
-    "MigrationError",
-    "EcosystemValidationError",
-    "Version",
-    "is_compatible",
-    "VersionNegotiator",
-    "APICompatibilityChecker",
-    "DeprecationManager",
+    # SDK v2 Stabilization Components
+    "SDKError",
+    "SDKValidationError",
+    "SDKAuthenticationError",
+    "SDKConnectionError",
+    "SDKExecutionError",
+    "SDKDeprecationWarning",
+    "translate_core_errors",
+    "SDKRequest",
+    "SDKResponse",
+    "ISDKClient",
+    "ISDKAuthenticator",
+    "SDKVersionChecker",
     "deprecated",
-    "LegacyAPIAdapter",
-    "SchemaMigrator",
-    "ConfigurationMigrator",
-    "DataMigrator",
-    "AgentCompatibilityValidator",
-    "HubCompatibilityValidator",
-    "RelayCompatibilityValidator",
-    "CLICompatibilityValidator",
-    "RuntimeCompatibilityChecker",
-    "CompatibilityManager",
+    "SDKMigrationHelper",
+    "AsyncYasinCoreClient",
 ]
