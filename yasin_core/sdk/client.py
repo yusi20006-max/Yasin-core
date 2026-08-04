@@ -23,6 +23,7 @@ from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobSta
 from yasin_core.security.manager import SecurityManager
 from yasin_core.observability import ObservabilityService
 from yasin_core.execution.distributed import DistributedWorkerManager
+from yasin_core.compatibility import CompatibilityManager
 
 
 class YasinCoreClient:
@@ -76,6 +77,7 @@ class YasinCoreClient:
         self._worker_manager = DistributedWorkerManager(self)
         self._orchestrator = RuntimeOrchestrator(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
+        self._compatibility = CompatibilityManager(self)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (
@@ -169,6 +171,10 @@ class YasinCoreClient:
             SecurityManager, self._security_manager
         )
         self._di_container.register_instance("security_manager", self._security_manager)
+
+        # Register CompatibilityManager
+        self._di_container.register_instance(CompatibilityManager, self._compatibility)
+        self._di_container.register_instance("compatibility", self._compatibility)
 
         # Register AgentRuntime
         self._di_container.register_instance(
@@ -296,6 +302,11 @@ class YasinCoreClient:
     def security(self) -> SecurityManager:
         """Access the centralized Security & Permission Manager."""
         return self._security_manager
+
+    @property
+    def compatibility(self) -> CompatibilityManager:
+        """Access the migration and compatibility layer manager."""
+        return self._compatibility
 
     @property
     def agent_runtime(self) -> Any:

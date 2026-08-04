@@ -116,6 +116,31 @@ from yasin_core.security import (
     require_permission,
 )
 
+# Import Compatibility Framework
+from yasin_core.compatibility import (
+    CompatibilityError,
+    VersionMismatchError,
+    APICompatibilityError,
+    MigrationError,
+    EcosystemValidationError,
+    Version,
+    is_compatible,
+    VersionNegotiator,
+    APICompatibilityChecker,
+    DeprecationManager,
+    deprecated,
+    LegacyAPIAdapter,
+    SchemaMigrator,
+    ConfigurationMigrator,
+    DataMigrator,
+    AgentCompatibilityValidator,
+    HubCompatibilityValidator,
+    RelayCompatibilityValidator,
+    CLICompatibilityValidator,
+    RuntimeCompatibilityChecker,
+    CompatibilityManager,
+)
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
@@ -246,4 +271,26 @@ __all__ = [
     "SECURITY_ACCESS_DENIED",
     "SecurityManager",
     "require_permission",
+    # Compatibility framework exports
+    "CompatibilityError",
+    "VersionMismatchError",
+    "APICompatibilityError",
+    "MigrationError",
+    "EcosystemValidationError",
+    "Version",
+    "is_compatible",
+    "VersionNegotiator",
+    "APICompatibilityChecker",
+    "DeprecationManager",
+    "deprecated",
+    "LegacyAPIAdapter",
+    "SchemaMigrator",
+    "ConfigurationMigrator",
+    "DataMigrator",
+    "AgentCompatibilityValidator",
+    "HubCompatibilityValidator",
+    "RelayCompatibilityValidator",
+    "CLICompatibilityValidator",
+    "RuntimeCompatibilityChecker",
+    "CompatibilityManager",
 ]
