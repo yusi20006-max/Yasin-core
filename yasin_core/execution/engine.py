@@ -61,6 +61,8 @@ class TaskExecutionEngine(BaseService):
             # Wait for all workers to finish
             for worker in self._workers:
                 worker.join(timeout=2.0)
+                if worker.is_alive():
+                    self.logger.warning(f"Worker {worker.name} did not terminate within the 2.0s timeout.")
 
             self._workers.clear()
             self.queue.clear()

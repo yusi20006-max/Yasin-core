@@ -15,47 +15,26 @@ class SDKVersionChecker:
         return sdk_parts[0] == core_parts[0]
 
 
-from typing import Optional, Union, Type
-
 def deprecated(
-    since: Optional[str] = None,
-    instead: Optional[str] = None,
-    message: Optional[str] = None,
-    replaced_by: str = ""
+    since: Any = None,
+    instead: Any = None,
+    message: Any = None,
+    replaced_by: str = "",
 ):
-    """Unified decorator supporting both compatibility and SDK v2 deprecation warning flows."""
-    from yasin_core.compatibility.warnings import _manager
+    """Unified decorator supporting both SDK v2 stabilization and global compatibility layer."""
+    if since is not None or instead is not None or message is not None:
+        from yasin_core.compatibility.warnings import deprecated as core_deprecated
+        return core_deprecated(since=since, instead=instead, message=message)
 
-    # If replaced_by is provided, map it to instead
-    if replaced_by and not instead:
-        instead = replaced_by
-
-    def decorator(func_or_class: Union[Callable[..., Any], Type[Any]]) -> Any:
-        if isinstance(func_or_class, type):
-            orig_init = func_or_class.__init__
-
-            @functools.wraps(orig_init)
-            def wrapped_init(self, *args, **kwargs):
-                if replaced_by:
-                    msg = message or f"{func_or_class.__name__} is deprecated and will be removed in SDK v3."
-                else:
-                    msg = message or f"Class '{func_or_class.__name__}' is deprecated"
-                _manager.warn(msg, since=since, instead=instead, stacklevel=3)
-                orig_init(self, *args, **kwargs)
-
-            func_or_class.__init__ = wrapped_init
-            return func_or_class
-        else:
-            @functools.wraps(func_or_class)
-            def wrapper(*args, **kwargs):
-                if replaced_by:
-                    msg = message or f"{func_or_class.__name__} is deprecated and will be removed in SDK v3."
-                else:
-                    msg = message or f"Function/method '{func_or_class.__name__}' is deprecated"
-                _manager.warn(msg, since=since, instead=instead, stacklevel=3)
-                return func_or_class(*args, **kwargs)
-            return wrapper
-
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            msg = f"{func.__name__} is deprecated and will be removed in SDK v3."
+            if replaced_by:
+                msg += f" Please use {replaced_by} instead."
+            warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
+            return func(*args, **kwargs)
+        return wrapper
     return decorator
 
 

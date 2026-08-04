@@ -133,11 +133,6 @@ from .async_client import AsyncYasinCoreClient
 
 # Import Compatibility Framework components
 from yasin_core.compatibility import (
-    CompatibilityError,
-    VersionMismatchError,
-    APICompatibilityError,
-    MigrationError,
-    EcosystemValidationError,
     Version,
     is_compatible,
     VersionNegotiator,
@@ -153,6 +148,11 @@ from yasin_core.compatibility import (
     CLICompatibilityValidator,
     RuntimeCompatibilityChecker,
     CompatibilityManager,
+    CompatibilityError,
+    VersionMismatchError,
+    APICompatibilityError,
+    MigrationError,
+    EcosystemValidationError,
 )
 
 # Event Name Constants
@@ -302,11 +302,6 @@ __all__ = [
     "SDKMigrationHelper",
     "AsyncYasinCoreClient",
     # Compatibility Framework exports
-    "CompatibilityError",
-    "VersionMismatchError",
-    "APICompatibilityError",
-    "MigrationError",
-    "EcosystemValidationError",
     "Version",
     "is_compatible",
     "VersionNegotiator",
@@ -322,4 +317,9 @@ __all__ = [
     "CLICompatibilityValidator",
     "RuntimeCompatibilityChecker",
     "CompatibilityManager",
+    "CompatibilityError",
+    "VersionMismatchError",
+    "APICompatibilityError",
+    "MigrationError",
+    "EcosystemValidationError",
 ]

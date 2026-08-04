@@ -15,7 +15,7 @@ def test_sdk_client_initialization():
     """تست مقداردهی اولیه کلاینت SDK در YasinRelay."""
     client = YasinCoreClient()
     assert client is not None
-    assert client.version == "3.0.0"
+    assert client.version == "3.3.0"
 
 
 @patch("requests.post")
