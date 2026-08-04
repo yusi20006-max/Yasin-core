@@ -85,6 +85,14 @@ class RuntimeOrchestrator:
             self._stop_time = None
 
             try:
+                # Cleanly reset event bus executor if restarted
+                if hasattr(self.runtime, "event_bus") and self.runtime.event_bus:
+                    if hasattr(self.runtime.event_bus, "reset"):
+                        try:
+                            self.runtime.event_bus.reset()
+                        except Exception as e:
+                            self.logger.warning(f"Failed to reset event bus: {e}")
+
                 # Initialize standard configuration first, if available
                 if hasattr(self.runtime, "config") and hasattr(self.runtime.config, "initialize"):
                     try:

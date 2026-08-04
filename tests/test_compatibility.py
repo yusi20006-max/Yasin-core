@@ -278,7 +278,7 @@ def test_ecosystem_compatibility_validators():
     # Agent Validator
     class CompliantAgent:
         name = "test-agent"
-        core_version_compat = "^1.6.0"
+        core_version_compat = "^3.0.0"
         def execute_task(self, task):
             pass
 
@@ -307,7 +307,7 @@ def test_ecosystem_compatibility_validators():
     assert RelayCompatibilityValidator.validate(NonCompliantRelay())["compatible"] is False
 
     # CLI Validator
-    compliant_cli = {"commands": {"start": "desc"}, "core_version_compat": "^1.0.0"}
+    compliant_cli = {"commands": {"start": "desc"}, "core_version_compat": "^3.0.0"}
     non_compliant_cli = {"commands": "not-a-dict"}
     assert CLICompatibilityValidator.validate(compliant_cli)["compatible"] is True
     assert CLICompatibilityValidator.validate(non_compliant_cli)["compatible"] is False

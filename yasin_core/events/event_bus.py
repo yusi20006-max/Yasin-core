@@ -68,12 +68,13 @@ class EventBus:
     def _get_executor(self) -> concurrent.futures.ThreadPoolExecutor:
         """Return an active executor for asynchronous event handlers."""
         with self._lock:
-            if self._is_shutdown or self._executor is None:
+            if self._is_shutdown:
+                raise RuntimeError("Cannot get executor: EventBus is shut down.")
+            if self._executor is None:
                 self._executor = concurrent.futures.ThreadPoolExecutor(
                     max_workers=10,
                     thread_name_prefix="YasinEventBusAsync"
                 )
-                self._is_shutdown = False
             return self._executor
 
     def subscribe(
@@ -146,6 +147,15 @@ class EventBus:
             self.listeners.clear()
             self.logger.info("Cleared all subscriptions")
 
+    def reset(self) -> None:
+        """
+        Reset the EventBus shutdown state, allowing it to be restarted.
+        """
+        with self._lock:
+            self._is_shutdown = False
+            self._executor = None
+            self.logger.info("EventBus executor reset/enabled")
+
     def shutdown(self) -> None:
         """
         Shut down the event bus's asynchronous executor without waiting for queued tasks to finish.
@@ -154,6 +164,7 @@ class EventBus:
             if self._executor:
                 self._executor.shutdown(wait=False)
                 self._is_shutdown = True
+                self._executor = None
                 self.logger.info("EventBus executor shut down")
 
     def publish(self, event: Any, data: Any = None, **metadata) -> None:
@@ -202,7 +213,10 @@ class EventBus:
                 self._execute_async_handler(sub.handler, evt_obj)
             elif sub.async_handle:
                 # Sync handler, but requested async execution: dispatch to thread pool
-                self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
+                try:
+                    self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
+                except RuntimeError as e:
+                    self.logger.error(f"Failed to submit handler to executor after shutdown: {e}")
             else:
                 # Synchronous execution
                 self._safe_execute_handler(sub.handler, evt_obj)
@@ -251,7 +265,10 @@ class EventBus:
                 # Spawn concurrent async task
                 asyncio.create_task(self._safe_execute_async_handler(sub.handler, evt_obj))
             elif sub.async_handle:
-                self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
+                try:
+                    self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
+                except RuntimeError as e:
+                    self.logger.error(f"Failed to submit handler to executor after shutdown: {e}")
             else:
                 self._safe_execute_handler(sub.handler, evt_obj)
 
@@ -275,7 +292,10 @@ class EventBus:
             def run_in_loop():
                 """Execute the asynchronous event handler in a new event loop."""
                 asyncio.run(self._safe_execute_async_handler(handler, event))
-            self._get_executor().submit(run_in_loop)
+            try:
+                self._get_executor().submit(run_in_loop)
+            except RuntimeError as e:
+                self.logger.error(f"Failed to submit async handler after shutdown: {e}")
 
     def _safe_execute_handler(self, handler: Callable, event: Event) -> None:
         """
