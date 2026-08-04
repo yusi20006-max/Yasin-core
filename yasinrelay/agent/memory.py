@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
-from yasin_core.sdk import YasinCoreClient
 
 
 class BaseMemory(ABC):
@@ -33,53 +32,49 @@ class TaskMemory(BaseMemory):
     """حافظه کوتاه‌مدت متمرکز روی یک تسک مشخص."""
 
     def __init__(self) -> None:
-        self._client = YasinCoreClient()
+        self._storage: Dict[str, Any] = {}
 
     def store(self, key: str, value: Any) -> None:
-        self._client.save_memory(key, value, category="short-term")
+        self._storage[key] = value
 
     def retrieve(self, key: str) -> Any:
-        return self._client.get_memory(key, category="short-term")
+        return self._storage.get(key)
 
     def clear(self) -> None:
-        self._client = YasinCoreClient()
+        self._storage.clear()
 
 
 class SessionMemory(BaseMemory):
     """حافظه بلندمدت‌تر که در طول یک جلسه اجرایی زنده می‌ماند."""
 
     def __init__(self) -> None:
-        self._client = YasinCoreClient()
+        self._storage: Dict[str, Any] = {}
 
     def store(self, key: str, value: Any) -> None:
-        self._client.save_memory(key, value, category="long-term")
+        self._storage[key] = value
 
     def retrieve(self, key: str) -> Any:
-        return self._client.get_memory(key, category="long-term")
+        return self._storage.get(key)
 
     def clear(self) -> None:
-        self._client = YasinCoreClient()
+        self._storage.clear()
 
 
 class ConversationMemory(BaseMemory):
     """حافظه تخصصی برای نگه‌داری سابقه گفتگوها (نوبت‌های مکالمه)."""
 
     def __init__(self) -> None:
-        self._client = YasinCoreClient()
-        self._client.save_memory("messages", [], category="long-term")
+        self._messages: List[Dict[str, str]] = []
 
     def store(self, key: str, value: Any) -> None:
         # در حافظه گفتگو، key می‌تواند نقش فرستنده (مانند user یا assistant) و value متن پیام باشد.
-        messages = self._client.get_memory("messages", default=[], category="long-term")
-        messages.append({"role": key, "content": str(value)})
-        self._client.save_memory("messages", messages, category="long-term")
+        self._messages.append({"role": key, "content": str(value)})
 
     def retrieve(self, key: str) -> Any:
         # بازیابی پیام‌ها؛ در صورتی که کلید 'all' باشد، تمام پیام‌ها برگردانده می‌شود.
-        messages = self._client.get_memory("messages", default=[], category="long-term")
         if key == "all":
-            return messages
-        return [msg for msg in messages if msg["role"] == key]
+            return self._messages
+        return [msg for msg in self._messages if msg["role"] == key]
 
     def clear(self) -> None:
-        self._client.save_memory("messages", [], category="long-term")
+        self._messages.clear()
