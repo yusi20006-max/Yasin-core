@@ -1,7 +1,13 @@
-from typing import Optional, List, Dict, Any, Union, Callable
+from typing import Optional, List, Dict, Any, Union, Callable, Iterator
 from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
-from yasin_core.providers import AIProvider, ProviderManager
+from yasin_core.providers import (
+    AIProvider,
+    ProviderManager,
+    AIRequest,
+    AIResponse,
+    AIResponseChunk,
+)
 from yasin_core.events import EventBus
 from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
@@ -16,9 +22,176 @@ from yasin_core.core.orchestrator import RuntimeOrchestrator
 from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority, Scheduler, ScheduledJob
 from yasin_core.security.manager import SecurityManager
 from yasin_core.observability import ObservabilityService
+from yasin_core.execution.distributed import DistributedWorkerManager
+
+from .interfaces import ISDKClient
+from .errors import translate_core_errors
 
 
-class YasinCoreClient:
+class AgentNamespace:
+    """Grouped Agent Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def register(self, agent: BaseAgent) -> None:
+        """Register an agent."""
+        self._client.register_agent(agent)
+
+    @translate_core_errors
+    def get(self, name: str) -> Optional[BaseAgent]:
+        """Retrieve an agent."""
+        return self._client.get_agent(name)
+
+    @translate_core_errors
+    def remove(self, name: str) -> Optional[BaseAgent]:
+        """Remove an agent."""
+        return self._client.remove_agent(name)
+
+    @translate_core_errors
+    def list(self) -> List[str]:
+        """List registered agents."""
+        return self._client.list_agents()
+
+    @translate_core_errors
+    def start(self) -> None:
+        """Start all agents."""
+        self._client.start_agents()
+
+    @translate_core_errors
+    def stop(self) -> None:
+        """Stop all agents."""
+        self._client.stop_agents()
+
+
+class TaskNamespace:
+    """Grouped Task Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def create(
+        self, id: str, name: str, input_data: Optional[Dict[str, Any]] = None
+    ) -> Task:
+        """Create a task."""
+        return self._client.create_task(id, name, input_data)
+
+    @translate_core_errors
+    def execute(self, task: Task) -> Task:
+        """Execute a task."""
+        return self._client.execute_task(task)
+
+    @translate_core_errors
+    def submit_job(self, job: Job) -> Job:
+        """Submit background job."""
+        return self._client.submit_job(job)
+
+    @translate_core_errors
+    def create_job(
+        self,
+        target: Any,
+        args: Optional[tuple] = None,
+        kwargs: Optional[dict] = None,
+        name: Optional[str] = None,
+        priority: int = 20,
+        retries: int = 0,
+        timeout: Optional[float] = None,
+    ) -> Job:
+        """Create and submit a job."""
+        return self._client.create_job(
+            target=target,
+            args=args,
+            kwargs=kwargs,
+            name=name,
+            priority=priority,
+            retries=retries,
+            timeout=timeout,
+        )
+
+    @translate_core_errors
+    def get_job(self, job_id: str) -> Optional[Job]:
+        """Retrieve a job."""
+        return self._client.get_job(job_id)
+
+    @translate_core_errors
+    def cancel_job(self, job_id: str) -> bool:
+        """Cancel a job."""
+        return self._client.cancel_job(job_id)
+
+
+class MemoryNamespace:
+    """Grouped Memory Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def save(
+        self,
+        key: str,
+        value: Any,
+        category: str = "short-term",
+        metadata: Optional[Dict[str, Any]] = None,
+        ttl: Optional[int] = None,
+    ) -> None:
+        """Save a memory entry."""
+        self._client.save_memory(key, value, category, metadata, ttl)
+
+    @translate_core_errors
+    def get(
+        self, key: str, default: Any = None, category: str = "short-term"
+    ) -> Any:
+        """Retrieve a memory entry."""
+        return self._client.get_memory(key, default, category)
+
+
+class ContextNamespace:
+    """Grouped Context Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def create(self, data: Optional[Dict[str, Any]] = None):
+        """Create execution context."""
+        return self._client.create_context(data)
+
+    @property
+    def active(self):
+        """Get currently active context."""
+        return get_current_context()
+
+
+class ToolNamespace:
+    """Grouped Tool Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def register(self, tool: BaseTool) -> None:
+        """Register a tool."""
+        self._client.register_tool(tool)
+
+    @translate_core_errors
+    def get(self, name: str) -> Optional[BaseTool]:
+        """Retrieve a tool."""
+        return self._client.get_tool(name)
+
+    @translate_core_errors
+    def remove(self, name: str) -> Optional[BaseTool]:
+        """Remove a tool."""
+        return self._client.remove_tool(name)
+
+    @translate_core_errors
+    def list(self) -> List[str]:
+        """List tools."""
+        return self._client.list_tools()
+
+    @translate_core_errors
+    def execute(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        """Execute a tool."""
+        return self._client.execute_tool(name, *args, **kwargs)
+
+
+class YasinCoreClient(ISDKClient):
 
     def __init__(
         self,
@@ -44,6 +217,7 @@ class YasinCoreClient:
         	storage: Optional storage backend. Persistent storage enables storage-backed long-term memory when no long-term memory implementation is supplied.
         """
         self._version = VERSION
+        self._initialized = False
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
         self._executor = TaskExecutor(agent_manager=self._agent_manager)
@@ -52,8 +226,12 @@ class YasinCoreClient:
         self._agent_manager.event_bus = self._event_bus
         self._executor.event_bus = self._event_bus
 
+        # Instantiate official AgentRuntime service
+        from yasin_core.agents.runtime import AgentRuntime
+        self._agent_runtime = AgentRuntime(self)
+
         self._plugin_registry = PluginRegistry(event_bus=self._event_bus)
-        self._provider_manager = ProviderManager()
+        self._provider_manager = ProviderManager(client=self)
         self._tool_manager = ToolManager()
         self._service_registry = service_registry or RuntimeServiceRegistry()
         self._context_engine = context_engine or ContextEngine(event_bus=self._event_bus)
@@ -61,6 +239,8 @@ class YasinCoreClient:
         self._config_manager = config_manager or ConfigurationManager()
         self._observability = ObservabilityService(self)
         self._execution = TaskExecutionEngine(self)
+        self._scheduler = Scheduler(self)
+        self._worker_manager = DistributedWorkerManager(self)
         self._orchestrator = RuntimeOrchestrator(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
         self._scheduler = Scheduler(self)
@@ -73,8 +253,9 @@ class YasinCoreClient:
         )
 
         self._storage = storage or InMemoryStorage()
-        # Initialize storage
-        self._storage.initialize()
+
+        # Backward-compatible automatic initialization
+        self.initialize()
 
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
         if long_term_memory is not None:
@@ -92,6 +273,10 @@ class YasinCoreClient:
         self._api_gateway = api_gateway or APIGateway(self)
         self._di_container.register_instance(APIGateway, self._api_gateway)
         self._di_container.register_instance("api_gateway", self._api_gateway)
+
+        # Register ProviderManager
+        self._di_container.register_instance(ProviderManager, self._provider_manager)
+        self._di_container.register_instance("providers", self._provider_manager)
 
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
@@ -142,17 +327,32 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("execution", self._execution)
 
+        # Register DistributedWorkerManager
+        self._di_container.register_instance(
+            DistributedWorkerManager, self._worker_manager
+        )
+        self._di_container.register_instance("worker_manager", self._worker_manager)
+
         # Register SecurityManager
         self._di_container.register_instance(
             SecurityManager, self._security_manager
         )
         self._di_container.register_instance("security_manager", self._security_manager)
 
-        # Register Scheduler
-        self._di_container.register_instance(Scheduler, self._scheduler)
-        self._di_container.register_instance("scheduler", self._scheduler)
+        # Register AgentRuntime
+        self._di_container.register_instance(
+            AgentRuntime, self._agent_runtime
+        )
+        self._di_container.register_instance("agent_runtime", self._agent_runtime)
 
         # Register PluginRegistry within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="providers",
+            service=self._provider_manager,
+            version=self._version,
+            description="Unified AI Provider Abstraction Layer managing LLM endpoints.",
+            dependencies=["config"]
+        )
         self._service_registry.register_service(
             name="observability",
             service=self._observability,
@@ -190,6 +390,13 @@ class YasinCoreClient:
             version=self._version,
             description="Manages system access control and auditing.",
         )
+        self._service_registry.register_service(
+            name="agent_runtime",
+            service=self._agent_runtime,
+            version=self._version,
+            description="Central official Agent Runtime integration layer service.",
+            dependencies=["config", "storage", "security_manager"]
+        )
 
         # Register Memory services within RuntimeServiceRegistry
         self._service_registry.register_service(
@@ -221,6 +428,68 @@ class YasinCoreClient:
             description="Manages scheduled and recurring background jobs.",
             dependencies=["execution", "storage"]
         )
+        self._service_registry.register_service(
+            name="worker_manager",
+            service=self._worker_manager,
+            version=self._version,
+            description="Manages distributed worker nodes, heartbeats, and task routing.",
+            dependencies=["config"]
+        )
+
+    def initialize(self) -> None:
+        """Initialize storage and pre-start dependencies manually or lazily."""
+        if not self._initialized:
+            self._storage.initialize()
+            self._initialized = True
+
+    def is_active(self) -> bool:
+        """Check if the internal orchestrator is running."""
+        return str(self._orchestrator.status().get("state")).lower() == "running"
+
+    # Context Manager support
+    def __enter__(self) -> "YasinCoreClient":
+        self.initialize()
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.stop()
+
+    # Modern v2 SDK API Namespace organization
+    @property
+    def v2(self) -> "YasinCoreClient":
+        """Access modern, grouped v2 interfaces."""
+        return self
+
+    @property
+    def agents(self) -> AgentNamespace:
+        """Access grouped agent operations."""
+        return AgentNamespace(self)
+
+    @property
+    def tasks(self) -> TaskNamespace:
+        """Access grouped task operations."""
+        return TaskNamespace(self)
+
+    @property
+    def memory(self) -> MemoryNamespace:
+        """Access grouped memory operations."""
+        return MemoryNamespace(self)
+
+    @property
+    def context(self) -> ContextNamespace:
+        """Access grouped context operations."""
+        return ContextNamespace(self)
+
+    @property
+    def tools(self) -> ToolNamespace:
+        """Access grouped tool operations."""
+        return ToolNamespace(self)
+
+    @property
+    def providers(self) -> ProviderManager:
+        """Access the unified AI Provider Abstraction Layer."""
+        return self._provider_manager
 
     @property
     def observability(self) -> ObservabilityService:
@@ -246,6 +515,11 @@ class YasinCoreClient:
     def security(self) -> SecurityManager:
         """Access the centralized Security & Permission Manager."""
         return self._security_manager
+
+    @property
+    def agent_runtime(self) -> Any:
+        """Access the centralized Agent Runtime integration layer."""
+        return self._agent_runtime
 
     @property
     def registry(self) -> RuntimeServiceRegistry:
@@ -286,6 +560,11 @@ class YasinCoreClient:
     def execution(self) -> TaskExecutionEngine:
         """Access the centralized Task Execution Engine."""
         return self._execution
+
+    @property
+    def worker_manager(self) -> DistributedWorkerManager:
+        """Access the centralized Distributed Worker Manager."""
+        return self._worker_manager
 
     @property
     def scheduler(self) -> Scheduler:
@@ -337,28 +616,28 @@ class YasinCoreClient:
 
     # Agent Operations
     def register_agent(self, agent: BaseAgent) -> None:
-        """Register a new agent with the internal AgentManager."""
-        self._agent_manager.register_agent(agent)
+        """Register a new agent with the internal AgentRuntime."""
+        self._agent_runtime.register_agent(agent)
 
     def get_agent(self, name: str) -> Optional[BaseAgent]:
         """Retrieve a registered agent by name."""
-        return self._agent_manager.get_agent(name)
+        return self._agent_runtime.get_agent(name)
 
     def remove_agent(self, name: str) -> Optional[BaseAgent]:
         """Remove a registered agent by name."""
-        return self._agent_manager.remove_agent(name)
+        return self._agent_runtime.remove_agent(name)
 
     def list_agents(self) -> List[str]:
         """List names of all registered agents."""
-        return self._agent_manager.list_agents()
+        return self._agent_runtime.list_agents()
 
     def start_agents(self) -> None:
         """Start all registered agents."""
-        self._agent_manager.start_agents()
+        self._agent_runtime.start_agents()
 
     def stop_agents(self) -> None:
         """Stop all registered agents."""
-        self._agent_manager.stop_agents()
+        self._agent_runtime.stop_agents()
 
     # Task Operations
     def create_task(
@@ -368,8 +647,8 @@ class YasinCoreClient:
         return Task(id=id, name=name, input_data=input_data)
 
     def execute_task(self, task: Task) -> Task:
-        """Execute the task using the internal TaskExecutor."""
-        return self._executor.execute_task(task)
+        """Execute the task using the internal AgentRuntime."""
+        return self._agent_runtime.execute_agent_task(task)
 
     # Memory Operations
     def save_memory(
@@ -478,6 +757,14 @@ class YasinCoreClient:
         if not provider:
             raise ValueError(f"Provider '{provider_name}' is not registered.")
         return provider.generate(prompt)
+
+    def generate_response(self, request: AIRequest, fallback_chain: Optional[List[str]] = None) -> AIResponse:
+        """Generate a structured response for an AIRequest with routing and fallbacks."""
+        return self._provider_manager.generate_response(request, fallback_chain)
+
+    def generate_stream(self, request: Union[str, AIRequest], provider_name: Optional[str] = None) -> Iterator[Union[str, AIResponseChunk]]:
+        """Generate a stream of responses/completions."""
+        return self._provider_manager.generate_stream(request, provider_name)
 
     # Plugin Operations
     def register_plugin(self, plugin) -> None:

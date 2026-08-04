@@ -6,6 +6,7 @@ from yasin_core.config import (
 )
 from yasin_core.agents.base import BaseAgent
 from yasin_core.agents.task import Task
+from yasin_core.agents.runtime import IAgentRuntime, AgentRuntime
 from yasin_core.context.manager import active_context, get_current_context
 from yasin_core.context.engine import RuntimeContext, ContextEngine
 from yasin_core.plugins.bridge import PluginExecutionBridge
@@ -55,6 +56,30 @@ from yasin_core.observability import (
     ObservabilityService,
 )
 from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine, Scheduler, ScheduledJob
+from yasin_core.execution.distributed import (
+    WorkerState,
+    WorkerNode,
+    BaseDistributedWorker,
+    DistributedWorkerManager,
+)
+
+# Import AI Provider Layer
+from yasin_core.providers import (
+    AIProvider,
+    AIChatMessage,
+    AIRequest,
+    AIResponse,
+    AIResponseChunk,
+    AIProviderError,
+    AIProviderConnectionError,
+    AIProviderAuthError,
+    AIProviderRateLimitError,
+    ProviderRegistry,
+    ProviderManager,
+    MockProvider,
+    LocalProvider,
+    OpenAICompatibleProvider,
+)
 
 # Import API Gateway components
 from yasin_core.api import (
@@ -91,6 +116,21 @@ from yasin_core.security import (
     require_permission,
 )
 
+# Import SDK v2 Components
+from .errors import (
+    SDKError,
+    SDKValidationError,
+    SDKAuthenticationError,
+    SDKConnectionError,
+    SDKExecutionError,
+    SDKDeprecationWarning,
+    translate_core_errors,
+)
+from .models import SDKRequest, SDKResponse
+from .interfaces import ISDKClient, ISDKAuthenticator
+from .compat import SDKVersionChecker, deprecated, SDKMigrationHelper
+from .async_client import AsyncYasinCoreClient
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
@@ -110,6 +150,20 @@ JOB_RETRYING = "job_retrying"
 
 __all__ = [
     "YasinCoreClient",
+    "AIProvider",
+    "AIChatMessage",
+    "AIRequest",
+    "AIResponse",
+    "AIResponseChunk",
+    "AIProviderError",
+    "AIProviderConnectionError",
+    "AIProviderAuthError",
+    "AIProviderRateLimitError",
+    "ProviderRegistry",
+    "ProviderManager",
+    "MockProvider",
+    "LocalProvider",
+    "OpenAICompatibleProvider",
     "MetricsRegistry",
     "Metric",
     "Counter",
@@ -133,6 +187,8 @@ __all__ = [
     "Settings",
     "BaseAgent",
     "Task",
+    "IAgentRuntime",
+    "AgentRuntime",
     "active_context",
     "get_current_context",
     "RuntimeContext",
@@ -180,6 +236,10 @@ __all__ = [
     "TaskExecutionEngine",
     "Scheduler",
     "ScheduledJob",
+    "WorkerState",
+    "WorkerNode",
+    "BaseDistributedWorker",
+    "DistributedWorkerManager",
     # Security components
     "SecurityError",
     "AccessDeniedError",
@@ -201,4 +261,20 @@ __all__ = [
     "SECURITY_ACCESS_DENIED",
     "SecurityManager",
     "require_permission",
+    # SDK v2 Stabilization Components
+    "SDKError",
+    "SDKValidationError",
+    "SDKAuthenticationError",
+    "SDKConnectionError",
+    "SDKExecutionError",
+    "SDKDeprecationWarning",
+    "translate_core_errors",
+    "SDKRequest",
+    "SDKResponse",
+    "ISDKClient",
+    "ISDKAuthenticator",
+    "SDKVersionChecker",
+    "deprecated",
+    "SDKMigrationHelper",
+    "AsyncYasinCoreClient",
 ]

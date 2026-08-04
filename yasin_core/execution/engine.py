@@ -87,7 +87,33 @@ class TaskExecutionEngine(BaseService):
             self._jobs[job.id] = job
             job.status = JobStatus.QUEUED
 
-            # Enqueue the job
+            # Check if we should route to a distributed worker
+            if self.client and hasattr(self.client, "worker_manager") and self.client.worker_manager:
+                manager = self.client.worker_manager
+                if manager.list_workers():
+                    # 1. Explicit worker assignment
+                    if job.worker_id:
+                        assigned = manager.assign_job(job.id, job.worker_id)
+                        if assigned:
+                            return job
+
+                    # 2. Capability-based routing if a capability is explicitly requested
+                    required_capability = job.kwargs.get("required_capability") or job.kwargs.get("capability")
+                    if required_capability:
+                        assigned_worker = manager.assign_job_by_capability(job)
+                        if assigned_worker:
+                            return job
+
+                    # 3. Dynamic target-string matching
+                    if isinstance(job.target, str):
+                        target_capability = f"target:{job.target}"
+                        candidates = manager.discover_workers(target_capability)
+                        if candidates:
+                            assigned_worker = manager.assign_job_by_capability(job)
+                            if assigned_worker:
+                                return job
+
+            # Enqueue the job (local fallback)
             self.queue.put(job)
             self.logger.info(f"Job {job.id} ({job.name}) submitted and queued.")
             self._publish_event("job_queued", job)
