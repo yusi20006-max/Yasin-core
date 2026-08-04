@@ -333,3 +333,78 @@ payload = child_ctx.serialize()
 # Deserialization
 restored_ctx = RuntimeContext.deserialize(payload, engine=client.context_engine)
 ```
+
+
+## Task Execution Engine (v2.1)
+
+Yasin-Core v2.1 introduces a centralized, thread-safe, and modular **Task Execution Engine** under `yasin_core.execution` (exposed publicly via `yasin_core.sdk` and `client.execution`).
+
+The Task Execution Engine facilitates high-performance, background, asynchronous task/job execution across the Yasin ecosystem with full support for priority scheduling, retry logic, timeout handling, cooperative cancellation, event bus broadcasting, and memory/context propagation.
+
+### Key Capabilities
+
+1. **Task Model Definition (`Job` / `ExecutionTask`)**:
+   Standardized `Job` (aliased as `ExecutionTask`) containing properties like:
+   - `id`: Unique identifier (UUID).
+   - `name`: Human-readable identifier.
+   - `status`: Lifecycle state (`pending`, `queued`, `running`, `completed`, `failed`, `cancelled`).
+   - `priority`: Int or Enum (`LOW`=10, `NORMAL`=20, `HIGH`=30, `CRITICAL`=40).
+   - `retries`: Max retry attempts.
+   - `timeout`: Maximum execution time in seconds.
+   - `context_id`: Propagated execution context ID.
+   - `result` & `error`: Storage of outcome details.
+
+2. **Priority-Based Execution**:
+   A thread-safe `JobQueue` backed by a priority queue that processes jobs sorted by:
+   - Priority (highest value first, e.g. CRITICAL first).
+   - Time of creation (oldest first, FIFO fallback for equal priorities).
+   - A unique counter (strict tie-breaker to prevent comparison errors on `Job` instances).
+
+3. **Background Worker Abstraction**:
+   Dedicated worker threads (`JobWorker`) pull tasks from the priority queue, execute them inside their propagated active contexts, handle cooperative cancellations, timeouts (via futures), and schedule retries on failures.
+
+4. **Robust Target Resolution**:
+   Supports executing multiple types of workloads out-of-the-box:
+   - **Arbitrary Callable Targets**: Standard Python functions or callable objects.
+   - **Agent Workloads**: Executes registered agents (e.g. string agent names) using their standardized runtimes.
+   - **Plugin Tasks**: Invokes registered plugins seamlessly by identifying executable entry points.
+
+5. **Ecosystem-Wide Integration**:
+   - **Event Bus Integration**: Emits detailed standard lifecycle events (`job_queued`, `job_started`, `job_completed`, `job_failed`, `job_cancelled`, `job_retrying`).
+   - **Context Propagation**: Automatically runs jobs inside the active context of the submitting thread.
+   - **Memory Integration**: Auto-persists task outcomes and metadata to the short-term memory system.
+   - **Runtime Orchestrator**: Registered under the service name `"execution"` so background workers start/stop gracefully with the system.
+
+### Usage Example
+
+```python
+from yasin_core.sdk import YasinCoreClient, Job, JobPriority
+
+# 1. Initialize SDK Client and Start Orchestrator
+client = YasinCoreClient()
+client.start()
+
+# 2. Define a workload function
+def process_data(x: int, y: int) -> int:
+    return x * y
+
+# 3. Create and submit a Job
+job = client.create_job(
+    target=process_data,
+    args=(10, 5),
+    priority=JobPriority.HIGH,
+    retries=3,
+    timeout=5.0
+)
+
+# 4. Wait for completion or check status
+import time
+while job.status == "queued" or job.status == "running":
+    time.sleep(0.1)
+
+print(f"Job Status: {job.status}")
+print(f"Result: {job.result}")
+
+# 5. Stop Orchestrator on shutdown
+client.stop()
+```

@@ -14,6 +14,8 @@ from yasin_core.storage.base import BaseStorage
 from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
 from yasin_core.observability import ObservabilityService
+from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobStatus, JobPriority
+from yasin_core.security import SecurityManager
 
 
 class YasinCoreClient:
@@ -27,6 +29,7 @@ class YasinCoreClient:
         di_container=None,
         config_manager=None,
         storage=None,
+        api_gateway=None,
     ):
         """
         Initialize the SDK client and its core runtime services.
@@ -57,7 +60,9 @@ class YasinCoreClient:
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
         self._observability = ObservabilityService(self)
+        self._execution = TaskExecutionEngine(self)
         self._orchestrator = RuntimeOrchestrator(self)
+        self._security_manager = SecurityManager(event_bus=self._event_bus)
 
         from yasin_core.storage.in_memory import InMemoryStorage
         from yasin_core.memory import (
@@ -80,6 +85,10 @@ class YasinCoreClient:
                 )
             else:
                 self._long_term_memory = InMemoryLongTermMemory()
+
+        # Initialize APIGateway
+        from yasin_core.api.gateway import APIGateway
+        self._api_gateway = api_gateway or APIGateway(self)
 
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
@@ -124,6 +133,18 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("observability", self._observability)
 
+        # Register TaskExecutionEngine
+        self._di_container.register_instance(
+            TaskExecutionEngine, self._execution
+        )
+        self._di_container.register_instance("execution", self._execution)
+
+        # Register APIGateway
+        self._di_container.register_instance(
+            APIGateway, self._api_gateway
+        )
+        self._di_container.register_instance("api_gateway", self._api_gateway)
+
         # Register PluginRegistry within RuntimeServiceRegistry
         self._service_registry.register_service(
             name="observability",
@@ -138,6 +159,13 @@ class YasinCoreClient:
             description="Manages core and third-party plugin lifecycles.",
         )
         self._service_registry.register_service(
+            name="execution",
+            service=self._execution,
+            version=self._version,
+            description="Manages unified background task/job execution workflows.",
+            dependencies=["config"]
+        )
+        self._service_registry.register_service(
             name="config",
             service=self._config_manager,
             version=self._version,
@@ -148,6 +176,12 @@ class YasinCoreClient:
             service=self._storage,
             version=self._version,
             description="Manages ecosystem storage services.",
+        )
+        self._service_registry.register_service(
+            name="security_manager",
+            service=self._security_manager,
+            version=self._version,
+            description="Manages system access control and auditing.",
         )
 
         # Register Memory services within RuntimeServiceRegistry
@@ -162,6 +196,14 @@ class YasinCoreClient:
             service=self._long_term_memory,
             version=self._version,
             description="Long-term semantic/persistent memory layer."
+        )
+
+        # Register APIGateway service within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="api_gateway",
+            service=self._api_gateway,
+            version=self._version,
+            description="Unified public API Gateway interface."
         )
 
     @property
@@ -185,6 +227,11 @@ class YasinCoreClient:
         return self._config_manager
 
     @property
+    def security(self) -> SecurityManager:
+        """Access the centralized Security & Permission Manager."""
+        return self._security_manager
+
+    @property
     def registry(self) -> RuntimeServiceRegistry:
         """Access the centralized service registry (alias)."""
         return self._service_registry
@@ -193,6 +240,11 @@ class YasinCoreClient:
     def orchestrator(self) -> RuntimeOrchestrator:
         """Access the Runtime Orchestrator."""
         return self._orchestrator
+
+    @property
+    def api_gateway(self):
+        """Access the centralized public API Gateway."""
+        return self._api_gateway
 
     def start(self) -> None:
         """Start the orchestrator."""
@@ -213,6 +265,11 @@ class YasinCoreClient:
     def status(self) -> Dict[str, Any]:
         """Check overall status report."""
         return self._orchestrator.status()
+
+    @property
+    def execution(self) -> TaskExecutionEngine:
+        """Access the centralized Task Execution Engine."""
+        return self._execution
 
     @property
     def storage(self) -> BaseStorage:
@@ -298,12 +355,9 @@ class YasinCoreClient:
         self, key: str, value: Any, category: str = "short-term", metadata: Optional[Dict[str, Any]] = None, ttl: Optional[int] = None
     ) -> None:
         """Save a memory entry into short-term or long-term memory."""
-        # Auto-tag with any active context ID from get_current_context or similar
         ctx = get_current_context()
         merged_metadata = dict(metadata) if metadata is not None else {}
         if ctx and hasattr(ctx, "_data"):
-            # We can associate a context ID if present (using current active context if any)
-            # Some contexts may have a context id, or we look it up.
             context_id = getattr(ctx, "id", None)
             if context_id:
                 merged_metadata["context_id"] = context_id
@@ -405,6 +459,40 @@ class YasinCoreClient:
     def get_plugin_status(self) -> Dict[str, Any]:
         """Retrieve status of the plugin registry and registered plugins."""
         return self._plugin_registry.status()
+
+    # Job/Task Execution Operations
+    def submit_job(self, job: Job) -> Job:
+        """Submit a job to the Task Execution Engine."""
+        return self._execution.submit_job(job)
+
+    def create_job(
+        self,
+        target: Any,
+        args: Optional[tuple] = None,
+        kwargs: Optional[dict] = None,
+        name: Optional[str] = None,
+        priority: int = 20,
+        retries: int = 0,
+        timeout: Optional[float] = None,
+    ) -> Job:
+        """Create and submit a job to the Task Execution Engine."""
+        return self._execution.create_job(
+            target=target,
+            args=args,
+            kwargs=kwargs,
+            name=name,
+            priority=priority,
+            retries=retries,
+            timeout=timeout,
+        )
+
+    def get_job(self, job_id: str) -> Optional[Job]:
+        """Retrieve a registered job by ID."""
+        return self._execution.get_job(job_id)
+
+    def cancel_job(self, job_id: str) -> bool:
+        """Cancel a pending or running job."""
+        return self._execution.cancel_job(job_id)
 
     # Tool Operations
     def register_tool(self, tool: BaseTool) -> None:

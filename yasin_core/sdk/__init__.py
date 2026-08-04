@@ -54,6 +54,18 @@ from yasin_core.observability import (
     get_structured_logger,
     ObservabilityService,
 )
+from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine
+
+# Import API Gateway components
+from yasin_core.api import (
+    APIRequest,
+    APIResponse,
+    APIError,
+    APIErrorCode,
+    BaseAuthenticator,
+    APIKeyAuthenticator,
+    APIGateway,
+)
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -63,6 +75,14 @@ AGENT_STOPPED = "agent_stopped"
 TASK_STARTED = "task_started"
 TASK_COMPLETED = "task_completed"
 TASK_FAILED = "task_failed"
+
+# Job Event Name Constants
+JOB_QUEUED = "job_queued"
+JOB_STARTED = "job_started"
+JOB_COMPLETED = "job_completed"
+JOB_FAILED = "job_failed"
+JOB_CANCELLED = "job_cancelled"
+JOB_RETRYING = "job_retrying"
 
 __all__ = [
     "YasinCoreClient",
@@ -102,6 +122,12 @@ __all__ = [
     "TASK_STARTED",
     "TASK_COMPLETED",
     "TASK_FAILED",
+    "JOB_QUEUED",
+    "JOB_STARTED",
+    "JOB_COMPLETED",
+    "JOB_FAILED",
+    "JOB_CANCELLED",
+    "JOB_RETRYING",
     "PluginExecutionBridge",
     "BaseTool",
     "FunctionTool",
@@ -123,4 +149,9 @@ __all__ = [
     "StorageValidationError",
     "get_storage",
     "register_backend",
+    "Job",
+    "ExecutionTask",
+    "JobStatus",
+    "JobPriority",
+    "TaskExecutionEngine",
 ]
