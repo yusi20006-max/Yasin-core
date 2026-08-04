@@ -20,7 +20,7 @@ def test_sdk_client_initialization():
 
 @patch("requests.post")
 def test_ai_task_execution_through_sdk(mock_post):
-    """تست اجرای تسک‌های هوش مصنوعی با کمک SDK کلاینت."""
+    """تست پردازش متن از مسیر API در PassthroughProcessor."""
     # آماده‌سازی پاسخ فرضی API هوش مصنوعی
     mock_post.return_value = Mock(
         status_code=200,
@@ -40,10 +40,6 @@ def test_ai_task_execution_through_sdk(mock_post):
 
     assert processed.text == "متن پردازش‌شده با هوش مصنوعی"
 
-    # بررسی ذخیره‌سازی نتیجه در حافظه کوتاه مدت SDK
-    task_id = f"task-process-{hash(post.text)}"
-    memory_val = processor.client.get_memory(task_id, category="short-term")
-    assert memory_val == "متن پردازش‌شده با هوش مصنوعی"
 
 
 def test_context_creation_and_propagation():

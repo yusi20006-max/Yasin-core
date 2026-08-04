@@ -7,34 +7,16 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from yasin_core.sdk import get_current_context
 
 
 class ContextManager:
     """مدیریت کننده کانتکست و تاریخچه اجرای تسک‌ها برای هماهنگی با مدل‌های زبانی در آینده."""
 
     def __init__(self) -> None:
+        self.shared_variables: Dict[str, Any] = {}
+        self.task_metadata: Dict[str, Any] = {}
+        self.execution_history: List[Dict[str, Any]] = []
         self.started_at: datetime = datetime.now()
-        # Initialize internal structures in current SDK context if not exists
-        sdk_ctx = get_current_context()
-        if sdk_ctx.get("shared_variables") is None:
-            sdk_ctx.set("shared_variables", {})
-        if sdk_ctx.get("task_metadata") is None:
-            sdk_ctx.set("task_metadata", {})
-        if sdk_ctx.get("execution_history") is None:
-            sdk_ctx.set("execution_history", [])
-
-    @property
-    def shared_variables(self) -> Dict[str, Any]:
-        return get_current_context().get("shared_variables", {})
-
-    @property
-    def task_metadata(self) -> Dict[str, Any]:
-        return get_current_context().get("task_metadata", {})
-
-    @property
-    def execution_history(self) -> List[Dict[str, Any]]:
-        return get_current_context().get("execution_history", [])
 
     def set_variable(self, key: str, value: Any) -> None:
         """ذخیره یک متغیر مشترک در کانتکست."""
