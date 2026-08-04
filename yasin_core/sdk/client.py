@@ -23,6 +23,7 @@ from yasin_core.execution import TaskExecutionEngine, Job, ExecutionTask, JobSta
 from yasin_core.security.manager import SecurityManager
 from yasin_core.observability import ObservabilityService
 from yasin_core.execution.distributed import DistributedWorkerManager
+from yasin_core.compatibility import CompatibilityManager
 
 from .interfaces import ISDKClient
 from .errors import translate_core_errors
@@ -339,6 +340,10 @@ class YasinCoreClient(ISDKClient):
         )
         self._di_container.register_instance("security_manager", self._security_manager)
 
+        # Register CompatibilityManager
+        self._di_container.register_instance(CompatibilityManager, self._compatibility)
+        self._di_container.register_instance("compatibility", self._compatibility)
+
         # Register AgentRuntime
         self._di_container.register_instance(
             AgentRuntime, self._agent_runtime
@@ -515,6 +520,11 @@ class YasinCoreClient(ISDKClient):
     def security(self) -> SecurityManager:
         """Access the centralized Security & Permission Manager."""
         return self._security_manager
+
+    @property
+    def compatibility(self) -> CompatibilityManager:
+        """Access the migration and compatibility layer manager."""
+        return self._compatibility
 
     @property
     def agent_runtime(self) -> Any:
