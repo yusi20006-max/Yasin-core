@@ -283,6 +283,8 @@ class Scheduler(BaseService):
             self._stop_event.set()
 
         self._thread.join(timeout=3.0)
+        if self._thread and self._thread.is_alive():
+            self.logger.warning("Scheduler background thread did not stop within the 3.0s timeout.")
         self._thread = None
         self.logger.info("Scheduler service stopped successfully.")
 

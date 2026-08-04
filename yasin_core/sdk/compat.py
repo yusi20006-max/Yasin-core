@@ -15,8 +15,17 @@ class SDKVersionChecker:
         return sdk_parts[0] == core_parts[0]
 
 
-def deprecated(replaced_by: str = ""):
-    """Decorator to mark a function as deprecated in favor of a v2 alternative."""
+def deprecated(
+    since: Any = None,
+    instead: Any = None,
+    message: Any = None,
+    replaced_by: str = "",
+):
+    """Unified decorator supporting both SDK v2 stabilization and global compatibility layer."""
+    if since is not None or instead is not None or message is not None:
+        from yasin_core.compatibility.warnings import deprecated as core_deprecated
+        return core_deprecated(since=since, instead=instead, message=message)
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
