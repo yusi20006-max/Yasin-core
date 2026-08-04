@@ -62,6 +62,24 @@ from yasin_core.execution.distributed import (
     DistributedWorkerManager,
 )
 
+# Import AI Provider Layer
+from yasin_core.providers import (
+    AIProvider,
+    AIChatMessage,
+    AIRequest,
+    AIResponse,
+    AIResponseChunk,
+    AIProviderError,
+    AIProviderConnectionError,
+    AIProviderAuthError,
+    AIProviderRateLimitError,
+    ProviderRegistry,
+    ProviderManager,
+    MockProvider,
+    LocalProvider,
+    OpenAICompatibleProvider,
+)
+
 # Import API Gateway components
 from yasin_core.api import (
     APIRequest,
@@ -116,6 +134,20 @@ JOB_RETRYING = "job_retrying"
 
 __all__ = [
     "YasinCoreClient",
+    "AIProvider",
+    "AIChatMessage",
+    "AIRequest",
+    "AIResponse",
+    "AIResponseChunk",
+    "AIProviderError",
+    "AIProviderConnectionError",
+    "AIProviderAuthError",
+    "AIProviderRateLimitError",
+    "ProviderRegistry",
+    "ProviderManager",
+    "MockProvider",
+    "LocalProvider",
+    "OpenAICompatibleProvider",
     "MetricsRegistry",
     "Metric",
     "Counter",
