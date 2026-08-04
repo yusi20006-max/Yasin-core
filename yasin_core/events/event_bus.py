@@ -39,6 +39,12 @@ class EventBus:
     """
 
     def __init__(self, max_history_size: int = 100):
+        """
+        Initialize the event bus with bounded event history and asynchronous callback execution.
+        
+        Parameters:
+        	max_history_size (int): Maximum number of published events to retain in history.
+        """
         self.logger = get_logger("EVENT_BUS")
         self._lock = threading.RLock()
 
@@ -57,6 +63,18 @@ class EventBus:
             max_workers=10,
             thread_name_prefix="YasinEventBusAsync"
         )
+        self._is_shutdown = False
+
+    def _get_executor(self) -> concurrent.futures.ThreadPoolExecutor:
+        """Return an active executor for asynchronous event handlers."""
+        with self._lock:
+            if self._is_shutdown or self._executor is None:
+                self._executor = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=10,
+                    thread_name_prefix="YasinEventBusAsync"
+                )
+                self._is_shutdown = False
+            return self._executor
 
     def subscribe(
         self,
@@ -66,13 +84,13 @@ class EventBus:
         async_handle: bool = False
     ) -> None:
         """
-        Subscribe a handler/callback to a specific event or wildcard '*'.
-
-        Args:
-            event: Name of the event to subscribe to, or '*' for wildcard.
-            callback: The handler callable.
-            filter_func: Optional callable that takes an Event and returns bool.
-            async_handle: If True, forces the handler to be executed on a background thread.
+        Register a callback for a specific event or all events using the "*" wildcard.
+        
+        Parameters:
+            event (str): Event name, or "*" to receive all events.
+            callback (Callable): Callback invoked when a matching event is published.
+            filter_func (Optional[Callable[[Event], bool]]): Optional predicate that determines whether the callback handles an event.
+            async_handle (bool): Whether to execute the callback on a background thread.
         """
         with self._lock:
             if event not in self._subscriptions:
@@ -128,16 +146,23 @@ class EventBus:
             self.listeners.clear()
             self.logger.info("Cleared all subscriptions")
 
+    def shutdown(self) -> None:
+        """
+        Shut down the event bus's asynchronous executor without waiting for queued tasks to finish.
+        """
+        with self._lock:
+            if self._executor:
+                self._executor.shutdown(wait=False)
+                self._is_shutdown = True
+                self.logger.info("EventBus executor shut down")
+
     def publish(self, event: Any, data: Any = None, **metadata) -> None:
         """
-        Publish an event synchronously to all registered listeners.
-
-        Supports passing an Event object directly or passing a string name and payload.
-
-        Args:
-            event: An Event object or a string representing the event name.
-            data: The payload data (used when event is a string).
-            metadata: Custom metadata to attach to the event.
+        Publish an event to matching subscribers.
+        
+        The event may be provided as an `Event` instance or as an event name with
+        payload and metadata. Subscribers are invoked synchronously or dispatched
+        asynchronously according to their configuration.
         """
         # Normalize to Event object
         if isinstance(event, Event):
@@ -177,16 +202,19 @@ class EventBus:
                 self._execute_async_handler(sub.handler, evt_obj)
             elif sub.async_handle:
                 # Sync handler, but requested async execution: dispatch to thread pool
-                self._executor.submit(self._safe_execute_handler, sub.handler, evt_obj)
+                self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
             else:
                 # Synchronous execution
                 self._safe_execute_handler(sub.handler, evt_obj)
 
     async def async_publish(self, event: Any, data: Any = None, **metadata) -> None:
         """
-        Asynchronously publish an event to all registered listeners.
-
-        Designed for async environments, allowing concurrent scheduled task executions.
+        Publish an event to all matching subscribers.
+        
+        Parameters:
+            event (Any): An Event instance or the event name to publish.
+            data (Any): Payload for the event when `event` is an event name.
+            **metadata: Additional metadata to attach to the event.
         """
         if isinstance(event, Event):
             evt_obj = event
@@ -223,13 +251,17 @@ class EventBus:
                 # Spawn concurrent async task
                 asyncio.create_task(self._safe_execute_async_handler(sub.handler, evt_obj))
             elif sub.async_handle:
-                self._executor.submit(self._safe_execute_handler, sub.handler, evt_obj)
+                self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
             else:
                 self._safe_execute_handler(sub.handler, evt_obj)
 
     def _execute_async_handler(self, handler: Callable, event: Event) -> None:
         """
-        Helper to invoke an async handler from a sync context.
+        Schedule an asynchronous event handler from synchronous code.
+        
+        Parameters:
+            handler (Callable): The asynchronous callback to execute.
+            event (Event): The event passed to the callback.
         """
         try:
             loop = asyncio.get_running_loop()
@@ -241,8 +273,9 @@ class EventBus:
         else:
             # No running loop in this thread, execute in thread-pool with its own loop
             def run_in_loop():
+                """Execute the asynchronous event handler in a new event loop."""
                 asyncio.run(self._safe_execute_async_handler(handler, event))
-            self._executor.submit(run_in_loop)
+            self._get_executor().submit(run_in_loop)
 
     def _safe_execute_handler(self, handler: Callable, event: Event) -> None:
         """

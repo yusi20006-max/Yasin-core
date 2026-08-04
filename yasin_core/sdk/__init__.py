@@ -37,7 +37,24 @@ from yasin_core.storage import (
     register_backend,
 )
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState, OrchestratorError
-from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine, Scheduler, ScheduledJob
+from yasin_core.observability import (
+    MetricsRegistry,
+    Metric,
+    Counter,
+    Gauge,
+    Histogram,
+    MetricType,
+    BaseMetricProvider,
+    InMemoryMetricProvider,
+    ErrorTracker,
+    ErrorRecord,
+    PerformanceTimer,
+    JSONFormatter,
+    StructuredLogger,
+    get_structured_logger,
+    ObservabilityService,
+)
+from yasin_core.execution import Job, ExecutionTask, JobStatus, JobPriority, TaskExecutionEngine
 
 # Import API Gateway components
 from yasin_core.api import (
@@ -48,6 +65,30 @@ from yasin_core.api import (
     BaseAuthenticator,
     APIKeyAuthenticator,
     APIGateway,
+)
+
+# Import Security components
+from yasin_core.security import (
+    SecurityError,
+    AccessDeniedError,
+    AuthenticationError,
+    PermissionValidationError,
+    Permission,
+    Role,
+    Subject,
+    BasePolicy,
+    DefaultRBACPolicy,
+    PolicyEngine,
+    ConfigurationSecurityValidator,
+    SensitiveDataProtector,
+    BaseCredentialStore,
+    InMemoryCredentialStore,
+    AuditLogger,
+    SECURITY_EVENT_AUDIT,
+    SECURITY_ACCESS_GRANTED,
+    SECURITY_ACCESS_DENIED,
+    SecurityManager,
+    require_permission,
 )
 
 # Event Name Constants
@@ -69,6 +110,21 @@ JOB_RETRYING = "job_retrying"
 
 __all__ = [
     "YasinCoreClient",
+    "MetricsRegistry",
+    "Metric",
+    "Counter",
+    "Gauge",
+    "Histogram",
+    "MetricType",
+    "BaseMetricProvider",
+    "InMemoryMetricProvider",
+    "ErrorTracker",
+    "ErrorRecord",
+    "PerformanceTimer",
+    "JSONFormatter",
+    "StructuredLogger",
+    "get_structured_logger",
+    "ObservabilityService",
     "ConfigurationManager",
     "RuntimeOrchestrator",
     "RuntimeState",
@@ -122,6 +178,25 @@ __all__ = [
     "JobStatus",
     "JobPriority",
     "TaskExecutionEngine",
-    "Scheduler",
-    "ScheduledJob",
+    # Security components
+    "SecurityError",
+    "AccessDeniedError",
+    "AuthenticationError",
+    "PermissionValidationError",
+    "Permission",
+    "Role",
+    "Subject",
+    "BasePolicy",
+    "DefaultRBACPolicy",
+    "PolicyEngine",
+    "ConfigurationSecurityValidator",
+    "SensitiveDataProtector",
+    "BaseCredentialStore",
+    "InMemoryCredentialStore",
+    "AuditLogger",
+    "SECURITY_EVENT_AUDIT",
+    "SECURITY_ACCESS_GRANTED",
+    "SECURITY_ACCESS_DENIED",
+    "SecurityManager",
+    "require_permission",
 ]

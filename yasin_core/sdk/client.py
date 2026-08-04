@@ -30,6 +30,18 @@ class YasinCoreClient:
         storage=None,
         api_gateway=None,
     ):
+        """
+        Initialize the SDK client and its core runtime services.
+        
+        Parameters:
+        	short_term_memory: Optional short-term memory implementation.
+        	long_term_memory: Optional long-term memory implementation.
+        	service_registry: Optional runtime service registry.
+        	context_engine: Optional execution context engine.
+        	di_container: Optional dependency-injection container.
+        	config_manager: Optional configuration manager.
+        	storage: Optional storage backend. Persistent storage enables storage-backed long-term memory when no long-term memory implementation is supplied.
+        """
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
@@ -46,9 +58,10 @@ class YasinCoreClient:
         self._context_engine = context_engine or ContextEngine()
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
+        self._observability = ObservabilityService(self)
+        self._execution = TaskExecutionEngine(self)
         self._orchestrator = RuntimeOrchestrator(self)
         self._execution = TaskExecutionEngine(self)
-        self._scheduler = Scheduler(self)
         self._security_manager = SecurityManager(event_bus=self._event_bus)
 
         from yasin_core.storage.in_memory import InMemoryStorage
@@ -76,6 +89,8 @@ class YasinCoreClient:
         # Initialize APIGateway
         from yasin_core.api.gateway import APIGateway
         self._api_gateway = api_gateway or APIGateway(self)
+        self._di_container.register_instance(APIGateway, self._api_gateway)
+        self._di_container.register_instance("api_gateway", self._api_gateway)
 
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
@@ -114,21 +129,31 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("orchestrator", self._orchestrator)
 
+        # Register ObservabilityService
+        self._di_container.register_instance(
+            ObservabilityService, self._observability
+        )
+        self._di_container.register_instance("observability", self._observability)
+
         # Register TaskExecutionEngine
         self._di_container.register_instance(
             TaskExecutionEngine, self._execution
         )
         self._di_container.register_instance("execution", self._execution)
 
-        # Register APIGateway
-        self._di_container.register_instance(APIGateway, self._api_gateway)
-        self._di_container.register_instance("api_gateway", self._api_gateway)
-
-        # Register Scheduler
-        self._di_container.register_instance(Scheduler, self._scheduler)
-        self._di_container.register_instance("scheduler", self._scheduler)
+        # Register SecurityManager
+        self._di_container.register_instance(
+            SecurityManager, self._security_manager
+        )
+        self._di_container.register_instance("security_manager", self._security_manager)
 
         # Register PluginRegistry within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="observability",
+            service=self._observability,
+            version=self._version,
+            description="Observability and metrics collection service.",
+        )
         self._service_registry.register_service(
             name="plugin_registry",
             service=self._plugin_registry,
@@ -191,6 +216,11 @@ class YasinCoreClient:
             description="Manages scheduled and recurring background jobs.",
             dependencies=["execution", "storage"]
         )
+
+    @property
+    def observability(self) -> ObservabilityService:
+        """Access the centralized Observability & Metrics Service."""
+        return self._observability
 
     @property
     def di_container(self) -> DIContainer:
