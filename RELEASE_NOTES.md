@@ -1,12 +1,12 @@
-# Release Notes - Yasin-Core v3.0.0 Stable
+# Release Notes - Yasin-Core v3.3.0 Stable
 
-Welcome to the stable release of **Yasin-Core v3.0.0**!
+Welcome to the stable release of **Yasin-Core v3.3.0**!
 
-Yasin-Core v3.0.0 serves as the official stable foundation of the entire Yasin AI Ecosystem. This release represents months of architectural refinement, rigorous verification, and optimization, creating an enterprise-ready, dependency-free, thread-safe, and highly compatible infrastructure for intelligent agents, pipeline execution, and distributed tasks.
+Yasin-Core v3.3.0 serves as the official stable, production-hardened foundation of the entire Yasin AI Ecosystem. This release represents months of architectural refinement, rigorous verification, reliability hardening, and optimization, creating an enterprise-ready, dependency-free, thread-safe, and highly compatible infrastructure for intelligent agents, pipeline execution, and distributed tasks.
 
 ---
 
-## Key Highlights of v3.0.0
+## Key Highlights of v3.3.0
 
 ### 1. Robust Agent Runtime & Context Management
 The Agent Runtime Integration Layer under `IAgentRuntime` provides thread-safe agent lifecycle management. Dynamic capability-based routing and isolated memory/context propagation allow agents to execute complex workflows reliably.
@@ -27,7 +27,7 @@ Exposes modern API namespace groupings (`agents`, `tasks`, `memory`, `context`, 
 
 ## Upgrade Guide & Compatibility
 
-Yasin-Core v3.0.0 preserves **100% backward compatibility** with previous minor and major releases of the Yasin ecosystem:
+Yasin-Core v3.3.0 preserves **100% backward compatibility** with previous minor and major releases of the Yasin ecosystem:
 - **YasinCLI**: Completely compatible via the CLICompatibilityValidator interface.
 - **Yasin-Agent**: Integrates seamlessly with the official Agent Runtime service.
 - **YasinHub**: Discovered and validated using HubCompatibilityValidator.
@@ -39,3 +39,14 @@ pip install --upgrade .
 ```
 
 No code modifications are required for existing integrations.
+
+---
+
+## Production Hardening Notes
+
+This stable line also includes production hardening work validated in the reliability audit:
+
+- safer startup/shutdown lifecycle handling for background workers and scheduler threads
+- hardened Event Bus shutdown and restart behavior
+- cleaner resource cleanup barriers for repeated test and service restarts
+- aligned global version signaling across runtime and ecosystem-facing release surfaces
