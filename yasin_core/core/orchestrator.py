@@ -127,6 +127,14 @@ class RuntimeOrchestrator:
                         if name != "services" and isinstance(info, dict) and str(info.get("state")).upper() == "ACTIVE":
                             raise OrchestratorError(f"Service '{name}' failed to stop (remains active).")
 
+                # Cleanly shutdown event bus executor
+                if hasattr(self.runtime, "event_bus") and self.runtime.event_bus:
+                    if hasattr(self.runtime.event_bus, "shutdown"):
+                        try:
+                            self.runtime.event_bus.shutdown()
+                        except Exception as e:
+                            self.logger.warning(f"Failed to shutdown event bus executor: {e}")
+
                 self._stop_time = time.time()
                 self._transition_to(RuntimeState.STOPPED)
                 self.logger.info("Yasin-Core central runtime orchestrator successfully stopped.")

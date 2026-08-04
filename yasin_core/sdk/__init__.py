@@ -37,6 +37,23 @@ from yasin_core.storage import (
     register_backend,
 )
 from yasin_core.core.orchestrator import RuntimeOrchestrator, RuntimeState, OrchestratorError
+from yasin_core.observability import (
+    MetricsRegistry,
+    Metric,
+    Counter,
+    Gauge,
+    Histogram,
+    MetricType,
+    BaseMetricProvider,
+    InMemoryMetricProvider,
+    ErrorTracker,
+    ErrorRecord,
+    PerformanceTimer,
+    JSONFormatter,
+    StructuredLogger,
+    get_structured_logger,
+    ObservabilityService,
+)
 
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
@@ -49,6 +66,21 @@ TASK_FAILED = "task_failed"
 
 __all__ = [
     "YasinCoreClient",
+    "MetricsRegistry",
+    "Metric",
+    "Counter",
+    "Gauge",
+    "Histogram",
+    "MetricType",
+    "BaseMetricProvider",
+    "InMemoryMetricProvider",
+    "ErrorTracker",
+    "ErrorRecord",
+    "PerformanceTimer",
+    "JSONFormatter",
+    "StructuredLogger",
+    "get_structured_logger",
+    "ObservabilityService",
     "ConfigurationManager",
     "RuntimeOrchestrator",
     "RuntimeState",

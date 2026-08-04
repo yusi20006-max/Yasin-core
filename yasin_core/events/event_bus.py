@@ -57,6 +57,17 @@ class EventBus:
             max_workers=10,
             thread_name_prefix="YasinEventBusAsync"
         )
+        self._is_shutdown = False
+
+    def _get_executor(self) -> concurrent.futures.ThreadPoolExecutor:
+        with self._lock:
+            if self._is_shutdown or self._executor is None:
+                self._executor = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=10,
+                    thread_name_prefix="YasinEventBusAsync"
+                )
+                self._is_shutdown = False
+            return self._executor
 
     def subscribe(
         self,
@@ -128,6 +139,16 @@ class EventBus:
             self.listeners.clear()
             self.logger.info("Cleared all subscriptions")
 
+    def shutdown(self) -> None:
+        """
+        Shutdown the event bus and its async executor cleanly.
+        """
+        with self._lock:
+            if self._executor:
+                self._executor.shutdown(wait=False)
+                self._is_shutdown = True
+                self.logger.info("EventBus executor shut down")
+
     def publish(self, event: Any, data: Any = None, **metadata) -> None:
         """
         Publish an event synchronously to all registered listeners.
@@ -177,7 +198,7 @@ class EventBus:
                 self._execute_async_handler(sub.handler, evt_obj)
             elif sub.async_handle:
                 # Sync handler, but requested async execution: dispatch to thread pool
-                self._executor.submit(self._safe_execute_handler, sub.handler, evt_obj)
+                self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
             else:
                 # Synchronous execution
                 self._safe_execute_handler(sub.handler, evt_obj)
@@ -223,7 +244,7 @@ class EventBus:
                 # Spawn concurrent async task
                 asyncio.create_task(self._safe_execute_async_handler(sub.handler, evt_obj))
             elif sub.async_handle:
-                self._executor.submit(self._safe_execute_handler, sub.handler, evt_obj)
+                self._get_executor().submit(self._safe_execute_handler, sub.handler, evt_obj)
             else:
                 self._safe_execute_handler(sub.handler, evt_obj)
 
@@ -242,7 +263,7 @@ class EventBus:
             # No running loop in this thread, execute in thread-pool with its own loop
             def run_in_loop():
                 asyncio.run(self._safe_execute_async_handler(handler, event))
-            self._executor.submit(run_in_loop)
+            self._get_executor().submit(run_in_loop)
 
     def _safe_execute_handler(self, handler: Callable, event: Event) -> None:
         """

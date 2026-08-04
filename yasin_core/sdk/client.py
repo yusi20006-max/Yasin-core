@@ -13,6 +13,7 @@ from yasin_core.config import ConfigurationManager
 from yasin_core.storage.base import BaseStorage
 from yasin_core.memory import ShortTermMemory, LongTermMemory
 from yasin_core.core.orchestrator import RuntimeOrchestrator
+from yasin_core.observability import ObservabilityService
 
 
 class YasinCoreClient:
@@ -43,6 +44,7 @@ class YasinCoreClient:
         self._context_engine = context_engine or ContextEngine()
         self._di_container = di_container or DIContainer()
         self._config_manager = config_manager or ConfigurationManager()
+        self._observability = ObservabilityService(self)
         self._orchestrator = RuntimeOrchestrator(self)
 
         from yasin_core.storage.in_memory import InMemoryStorage
@@ -104,7 +106,19 @@ class YasinCoreClient:
         )
         self._di_container.register_instance("orchestrator", self._orchestrator)
 
+        # Register ObservabilityService
+        self._di_container.register_instance(
+            ObservabilityService, self._observability
+        )
+        self._di_container.register_instance("observability", self._observability)
+
         # Register PluginRegistry within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="observability",
+            service=self._observability,
+            version=self._version,
+            description="Observability and metrics collection service.",
+        )
         self._service_registry.register_service(
             name="plugin_registry",
             service=self._plugin_registry,
@@ -137,6 +151,11 @@ class YasinCoreClient:
             version=self._version,
             description="Long-term semantic/persistent memory layer."
         )
+
+    @property
+    def observability(self) -> ObservabilityService:
+        """Access the centralized Observability & Metrics Service."""
+        return self._observability
 
     @property
     def di_container(self) -> DIContainer:
