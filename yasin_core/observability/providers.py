@@ -9,7 +9,12 @@ class BaseMetricProvider(ABC):
 
     @abstractmethod
     def collect(self, registry: MetricsRegistry) -> None:
-        """Collect metrics from the registry and process/store them."""
+        """
+        Collect and process metrics from the registry.
+        
+        Parameters:
+        	registry (MetricsRegistry): The registry containing the metrics to collect.
+        """
         pass
 
     @abstractmethod
@@ -21,6 +26,12 @@ class BaseMetricProvider(ABC):
 class InMemoryMetricProvider(BaseMetricProvider):
     """Thread-safe concrete provider that retains collected metrics in memory."""
     def __init__(self, max_snapshots: int = 1000):
+        """
+        Initialize an in-memory metric provider with a snapshot retention limit.
+        
+        Parameters:
+        	max_snapshots (int): Maximum number of metric snapshots to retain.
+        """
         self.max_snapshots = max_snapshots
         self._snapshots: List[Dict[str, Any]] = []
         self._lock = threading.RLock()
@@ -39,7 +50,12 @@ class InMemoryMetricProvider(BaseMetricProvider):
                 self._snapshots.pop(0)
 
     def export(self) -> List[Dict[str, Any]]:
-        """Return all stored metric snapshots."""
+        """
+        Return all stored metric snapshots as a shallow copy.
+        
+        Returns:
+            List[Dict[str, Any]]: The stored metric snapshots.
+        """
         with self._lock:
             return list(self._snapshots)
 

@@ -11,6 +11,7 @@ from yasin_core.observability.error_tracker import ErrorTracker, ErrorRecord
 from yasin_core.observability.performance import PerformanceTimer
 
 def get_process_memory_mb() -> float:
+    """Return the current process resident memory usage in megabytes."""
     try:
         import psutil
         return psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
@@ -28,6 +29,12 @@ def get_process_memory_mb() -> float:
         return 0.0
 
 def get_process_cpu_percent() -> float:
+    """
+    Get the current process CPU usage percentage.
+    
+    Returns:
+    	float: The process CPU usage percentage, or `0.0` when `psutil` is unavailable.
+    """
     try:
         import psutil
         return psutil.Process(os.getpid()).cpu_percent()
@@ -42,6 +49,7 @@ class ObservabilityService(BaseService):
     """
 
     def __init__(self, client: Any = None):
+        """Initialize the observability service with an optional client integration."""
         super().__init__()
         self.client = client
         self.metrics = MetricsRegistry()
@@ -52,6 +60,11 @@ class ObservabilityService(BaseService):
         self._initialized = False
 
     def initialize(self) -> None:
+        """
+        Initialize the observability service and register its default metric provider and event handler when available.
+        
+        This operation is idempotent; repeated calls leave an already initialized service unchanged.
+        """
         with self._lock:
             if self._initialized:
                 return
@@ -66,6 +79,7 @@ class ObservabilityService(BaseService):
             self._initialized = True
 
     def shutdown(self) -> None:
+        """Stop the observability service and unsubscribe its event handler."""
         with self._lock:
             if not self._initialized:
                 return
@@ -74,6 +88,7 @@ class ObservabilityService(BaseService):
             self._initialized = False
 
     def reload(self) -> None:
+        """Reset registered metrics, tracked errors, and provider state."""
         with self._lock:
             self.metrics.clear()
             self.errors.clear()
@@ -82,12 +97,25 @@ class ObservabilityService(BaseService):
                     provider.clear()
 
     def register_provider(self, provider: BaseMetricProvider) -> None:
+        """Register a metric provider if it has not already been registered.
+        
+        Parameters:
+            provider (BaseMetricProvider): The metric provider to register.
+        """
         with self._lock:
             if provider not in self.providers:
                 self.providers.append(provider)
 
     def record_api_request(self, method: str, endpoint: str, status_code: int, response_time: float) -> None:
-        """API request metrics tracker."""
+        """
+        Record metrics for an API request, including its duration and error status.
+        
+        Parameters:
+        	method (str): HTTP method used for the request.
+        	endpoint (str): API endpoint handling the request.
+        	status_code (int): HTTP response status code.
+        	response_time (float): Request duration in seconds.
+        """
         status_class = f"{status_code // 100}xx"
         labels = {"method": method, "endpoint": endpoint, "status_class": status_class}
 
@@ -117,7 +145,12 @@ class ObservabilityService(BaseService):
             ).inc()
 
     def _handle_event(self, event: Any) -> None:
-        """Wildcard EventBus event handler to record core ecosystem metrics."""
+        """
+        Record ecosystem metrics for an EventBus event, including task and agent lifecycle activity.
+        
+        Parameters:
+        	event (Any): Event containing a name and optional payload.
+        """
         event_name = getattr(event, "name", str(event))
 
         # Increment overall event counts
@@ -180,7 +213,7 @@ class ObservabilityService(BaseService):
             ).inc()
 
     def collect_all(self) -> None:
-        """Trigger update of on-demand and system metrics across the ecosystem."""
+        """Refresh system, ecosystem, and registered provider metrics."""
         with self._lock:
             # 1. System CPU and Memory Metrics
             cpu = get_process_cpu_percent()
@@ -257,7 +290,16 @@ class ObservabilityService(BaseService):
                     pass
 
     def get_metric_value(self, name: str, labels: Optional[Dict[str, str]] = None) -> Optional[float]:
-        """Convenience method to retrieve the latest numeric value of a Counter or Gauge."""
+        """
+        Retrieve a metric's numeric value for the specified labels.
+        
+        Parameters:
+            name (str): Metric name to query.
+            labels (Optional[Dict[str, str]]): Labels that identify the metric series.
+        
+        Returns:
+            Optional[float]: The metric value, the sum for a histogram, or `None` when no supported metric value is found.
+        """
         results = self.metrics.query_metrics(name=name, labels=labels)
         if not results:
             return None
@@ -275,12 +317,28 @@ class ObservabilityService(BaseService):
         start_time: Optional[float] = None,
         end_time: Optional[float] = None
     ) -> List[Dict[str, Any]]:
-        """Query collected metrics filtered by parameters."""
+        """
+        Query collected metrics using optional name, label, and time filters.
+        
+        Parameters:
+        	name (Optional[str]): Metric name to match.
+        	labels (Optional[Dict[str, str]]): Labels that matching metrics must include.
+        	start_time (Optional[float]): Inclusive start of the time range as a timestamp.
+        	end_time (Optional[float]): Inclusive end of the time range as a timestamp.
+        
+        Returns:
+        	List[Dict[str, Any]]: Serialized dictionaries for the matching metrics.
+        """
         metrics_objs = self.metrics.query_metrics(name, labels, start_time, end_time)
         return [m.to_dict() for m in metrics_objs]
 
     def health(self) -> Dict[str, Any]:
-        """Return the detailed consolidated health report of the service and entire ecosystem."""
+        """Generate a consolidated health report for the service and its ecosystem.
+        
+        Returns:
+            Dict[str, Any]: A report containing overall status, timestamp, process resource
+                usage, tracked error details, and available service health information.
+        """
         self.collect_all()
         errors = self.errors.get_errors()
         status = "healthy"

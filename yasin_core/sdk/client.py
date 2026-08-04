@@ -28,6 +28,18 @@ class YasinCoreClient:
         config_manager=None,
         storage=None,
     ):
+        """
+        Initialize the SDK client and its core runtime services.
+        
+        Parameters:
+        	short_term_memory: Optional short-term memory implementation.
+        	long_term_memory: Optional long-term memory implementation.
+        	service_registry: Optional runtime service registry.
+        	context_engine: Optional execution context engine.
+        	di_container: Optional dependency-injection container.
+        	config_manager: Optional configuration manager.
+        	storage: Optional storage backend. Persistent storage enables storage-backed long-term memory when no long-term memory implementation is supplied.
+        """
         self._version = VERSION
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()

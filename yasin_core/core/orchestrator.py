@@ -106,7 +106,14 @@ class RuntimeOrchestrator:
 
     def stop(self) -> None:
         """
-        Coordinates the shutdown sequence, shutting down services in reverse order.
+        Shut down the runtime and its registered services.
+        
+        Already stopped or uninitialized runtimes are left unchanged. Service shutdown
+        failures or services that remain active cause the runtime to enter the failed
+        state and raise an ``OrchestratorError``.
+        
+        Raises:
+            OrchestratorError: If the shutdown sequence fails.
         """
         with self._lock:
             if self._state in (RuntimeState.STOPPED, RuntimeState.UNINITIALIZED):
