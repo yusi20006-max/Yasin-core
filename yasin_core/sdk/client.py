@@ -1,7 +1,13 @@
-from typing import Optional, List, Dict, Any, Union, Callable
+from typing import Optional, List, Dict, Any, Union, Callable, Iterator
 from yasin_core.version import VERSION
 from yasin_core.agents import AgentManager, Task, TaskExecutor, BaseAgent
-from yasin_core.providers import AIProvider, ProviderManager
+from yasin_core.providers import (
+    AIProvider,
+    ProviderManager,
+    AIRequest,
+    AIResponse,
+    AIResponseChunk,
+)
 from yasin_core.events import EventBus
 from yasin_core.plugins import PluginRegistry
 from yasin_core.agents.tool import ToolManager, BaseTool
@@ -54,7 +60,7 @@ class YasinCoreClient:
         self._executor.event_bus = self._event_bus
 
         self._plugin_registry = PluginRegistry(event_bus=self._event_bus)
-        self._provider_manager = ProviderManager()
+        self._provider_manager = ProviderManager(client=self)
         self._tool_manager = ToolManager()
         self._service_registry = service_registry or RuntimeServiceRegistry()
         self._context_engine = context_engine or ContextEngine()
@@ -94,6 +100,10 @@ class YasinCoreClient:
         self._api_gateway = api_gateway or APIGateway(self)
         self._di_container.register_instance(APIGateway, self._api_gateway)
         self._di_container.register_instance("api_gateway", self._api_gateway)
+
+        # Register ProviderManager
+        self._di_container.register_instance(ProviderManager, self._provider_manager)
+        self._di_container.register_instance("providers", self._provider_manager)
 
         # Register services within the DI Container for clean service composition
         self._di_container.register_instance(YasinCoreClient, self)
@@ -157,6 +167,13 @@ class YasinCoreClient:
         self._di_container.register_instance("security_manager", self._security_manager)
 
         # Register PluginRegistry within RuntimeServiceRegistry
+        self._service_registry.register_service(
+            name="providers",
+            service=self._provider_manager,
+            version=self._version,
+            description="Unified AI Provider Abstraction Layer managing LLM endpoints.",
+            dependencies=["config"]
+        )
         self._service_registry.register_service(
             name="observability",
             service=self._observability,
@@ -232,6 +249,11 @@ class YasinCoreClient:
             description="Manages distributed worker nodes, heartbeats, and task routing.",
             dependencies=["config"]
         )
+
+    @property
+    def providers(self) -> ProviderManager:
+        """Access the unified AI Provider Abstraction Layer."""
+        return self._provider_manager
 
     @property
     def observability(self) -> ObservabilityService:
@@ -447,6 +469,14 @@ class YasinCoreClient:
         if not provider:
             raise ValueError(f"Provider '{provider_name}' is not registered.")
         return provider.generate(prompt)
+
+    def generate_response(self, request: AIRequest, fallback_chain: Optional[List[str]] = None) -> AIResponse:
+        """Generate a structured response for an AIRequest with routing and fallbacks."""
+        return self._provider_manager.generate_response(request, fallback_chain)
+
+    def generate_stream(self, request: Union[str, AIRequest], provider_name: Optional[str] = None) -> Iterator[Union[str, AIResponseChunk]]:
+        """Generate a stream of responses/completions."""
+        return self._provider_manager.generate_stream(request, provider_name)
 
     # Plugin Operations
     def register_plugin(self, plugin) -> None:
