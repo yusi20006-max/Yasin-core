@@ -116,6 +116,21 @@ from yasin_core.security import (
     require_permission,
 )
 
+# Import SDK v2 Components
+from .errors import (
+    SDKError,
+    SDKValidationError,
+    SDKAuthenticationError,
+    SDKConnectionError,
+    SDKExecutionError,
+    SDKDeprecationWarning,
+    translate_core_errors,
+)
+from .models import SDKRequest, SDKResponse
+from .interfaces import ISDKClient, ISDKAuthenticator
+from .compat import SDKVersionChecker, deprecated, SDKMigrationHelper
+from .async_client import AsyncYasinCoreClient
+
 # Event Name Constants
 AGENT_REGISTERED = "agent_registered"
 AGENT_REMOVED = "agent_removed"
@@ -246,4 +261,20 @@ __all__ = [
     "SECURITY_ACCESS_DENIED",
     "SecurityManager",
     "require_permission",
+    # SDK v2 Stabilization Components
+    "SDKError",
+    "SDKValidationError",
+    "SDKAuthenticationError",
+    "SDKConnectionError",
+    "SDKExecutionError",
+    "SDKDeprecationWarning",
+    "translate_core_errors",
+    "SDKRequest",
+    "SDKResponse",
+    "ISDKClient",
+    "ISDKAuthenticator",
+    "SDKVersionChecker",
+    "deprecated",
+    "SDKMigrationHelper",
+    "AsyncYasinCoreClient",
 ]

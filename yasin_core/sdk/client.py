@@ -24,8 +24,174 @@ from yasin_core.security.manager import SecurityManager
 from yasin_core.observability import ObservabilityService
 from yasin_core.execution.distributed import DistributedWorkerManager
 
+from .interfaces import ISDKClient
+from .errors import translate_core_errors
 
-class YasinCoreClient:
+
+class AgentNamespace:
+    """Grouped Agent Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def register(self, agent: BaseAgent) -> None:
+        """Register an agent."""
+        self._client.register_agent(agent)
+
+    @translate_core_errors
+    def get(self, name: str) -> Optional[BaseAgent]:
+        """Retrieve an agent."""
+        return self._client.get_agent(name)
+
+    @translate_core_errors
+    def remove(self, name: str) -> Optional[BaseAgent]:
+        """Remove an agent."""
+        return self._client.remove_agent(name)
+
+    @translate_core_errors
+    def list(self) -> List[str]:
+        """List registered agents."""
+        return self._client.list_agents()
+
+    @translate_core_errors
+    def start(self) -> None:
+        """Start all agents."""
+        self._client.start_agents()
+
+    @translate_core_errors
+    def stop(self) -> None:
+        """Stop all agents."""
+        self._client.stop_agents()
+
+
+class TaskNamespace:
+    """Grouped Task Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def create(
+        self, id: str, name: str, input_data: Optional[Dict[str, Any]] = None
+    ) -> Task:
+        """Create a task."""
+        return self._client.create_task(id, name, input_data)
+
+    @translate_core_errors
+    def execute(self, task: Task) -> Task:
+        """Execute a task."""
+        return self._client.execute_task(task)
+
+    @translate_core_errors
+    def submit_job(self, job: Job) -> Job:
+        """Submit background job."""
+        return self._client.submit_job(job)
+
+    @translate_core_errors
+    def create_job(
+        self,
+        target: Any,
+        args: Optional[tuple] = None,
+        kwargs: Optional[dict] = None,
+        name: Optional[str] = None,
+        priority: int = 20,
+        retries: int = 0,
+        timeout: Optional[float] = None,
+    ) -> Job:
+        """Create and submit a job."""
+        return self._client.create_job(
+            target=target,
+            args=args,
+            kwargs=kwargs,
+            name=name,
+            priority=priority,
+            retries=retries,
+            timeout=timeout,
+        )
+
+    @translate_core_errors
+    def get_job(self, job_id: str) -> Optional[Job]:
+        """Retrieve a job."""
+        return self._client.get_job(job_id)
+
+    @translate_core_errors
+    def cancel_job(self, job_id: str) -> bool:
+        """Cancel a job."""
+        return self._client.cancel_job(job_id)
+
+
+class MemoryNamespace:
+    """Grouped Memory Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def save(
+        self,
+        key: str,
+        value: Any,
+        category: str = "short-term",
+        metadata: Optional[Dict[str, Any]] = None,
+        ttl: Optional[int] = None,
+    ) -> None:
+        """Save a memory entry."""
+        self._client.save_memory(key, value, category, metadata, ttl)
+
+    @translate_core_errors
+    def get(
+        self, key: str, default: Any = None, category: str = "short-term"
+    ) -> Any:
+        """Retrieve a memory entry."""
+        return self._client.get_memory(key, default, category)
+
+
+class ContextNamespace:
+    """Grouped Context Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def create(self, data: Optional[Dict[str, Any]] = None):
+        """Create execution context."""
+        return self._client.create_context(data)
+
+    @property
+    def active(self):
+        """Get currently active context."""
+        return get_current_context()
+
+
+class ToolNamespace:
+    """Grouped Tool Operations for SDK v2."""
+    def __init__(self, client: "YasinCoreClient"):
+        self._client = client
+
+    @translate_core_errors
+    def register(self, tool: BaseTool) -> None:
+        """Register a tool."""
+        self._client.register_tool(tool)
+
+    @translate_core_errors
+    def get(self, name: str) -> Optional[BaseTool]:
+        """Retrieve a tool."""
+        return self._client.get_tool(name)
+
+    @translate_core_errors
+    def remove(self, name: str) -> Optional[BaseTool]:
+        """Remove a tool."""
+        return self._client.remove_tool(name)
+
+    @translate_core_errors
+    def list(self) -> List[str]:
+        """List tools."""
+        return self._client.list_tools()
+
+    @translate_core_errors
+    def execute(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        """Execute a tool."""
+        return self._client.execute_tool(name, *args, **kwargs)
+
+
+class YasinCoreClient(ISDKClient):
 
     def __init__(
         self,
@@ -51,6 +217,7 @@ class YasinCoreClient:
         	storage: Optional storage backend. Persistent storage enables storage-backed long-term memory when no long-term memory implementation is supplied.
         """
         self._version = VERSION
+        self._initialized = False
         self._event_bus = EventBus()
         self._agent_manager = AgentManager()
         self._executor = TaskExecutor(agent_manager=self._agent_manager)
@@ -85,8 +252,9 @@ class YasinCoreClient:
         )
 
         self._storage = storage or InMemoryStorage()
-        # Initialize storage
-        self._storage.initialize()
+
+        # Backward-compatible automatic initialization
+        self.initialize()
 
         self._short_term_memory = short_term_memory or InMemoryShortTermMemory()
         if long_term_memory is not None:
@@ -266,6 +434,56 @@ class YasinCoreClient:
             description="Manages distributed worker nodes, heartbeats, and task routing.",
             dependencies=["config"]
         )
+
+    def initialize(self) -> None:
+        """Initialize storage and pre-start dependencies manually or lazily."""
+        if not self._initialized:
+            self._storage.initialize()
+            self._initialized = True
+
+    def is_active(self) -> bool:
+        """Check if the internal orchestrator is running."""
+        return str(self._orchestrator.status().get("state")).lower() == "running"
+
+    # Context Manager support
+    def __enter__(self) -> "YasinCoreClient":
+        self.initialize()
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.stop()
+
+    # Modern v2 SDK API Namespace organization
+    @property
+    def v2(self) -> "YasinCoreClient":
+        """Access modern, grouped v2 interfaces."""
+        return self
+
+    @property
+    def agents(self) -> AgentNamespace:
+        """Access grouped agent operations."""
+        return AgentNamespace(self)
+
+    @property
+    def tasks(self) -> TaskNamespace:
+        """Access grouped task operations."""
+        return TaskNamespace(self)
+
+    @property
+    def memory(self) -> MemoryNamespace:
+        """Access grouped memory operations."""
+        return MemoryNamespace(self)
+
+    @property
+    def context(self) -> ContextNamespace:
+        """Access grouped context operations."""
+        return ContextNamespace(self)
+
+    @property
+    def tools(self) -> ToolNamespace:
+        """Access grouped tool operations."""
+        return ToolNamespace(self)
 
     @property
     def providers(self) -> ProviderManager:
