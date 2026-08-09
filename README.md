@@ -72,6 +72,12 @@ Important repository documents:
 
 Note: some archived or historical documents may still contain legacy or cross-project references. The canonical identity of this repository is `Yasin-Core`.
 
+### Optional Dependencies
+
+Required dependencies are listed in `requirements.txt`. The following are optional and only affect specific observability features:
+
+- **`psutil`** — enables accurate process memory (RSS) and CPU percentage reporting in `yasin_core.observability.service`. Without it, memory usage falls back to the stdlib `resource` module and CPU usage reports as `0.0`. Install with `pip install psutil` if you need precise process metrics.
+
 ### Testing
 
 Typical test entry point:
@@ -153,6 +159,12 @@ Yasin-Core serves as the shared backend and runtime foundation for the broader Y
 - `docs/PRODUCTION_AUDIT.md`
 
 نکته: ممکن است بعضی فایل‌های قدیمی یا آرشیوی هنوز شامل ارجاعات legacy یا بین‌پروژه‌ای باشند. هویت canonical این مخزن `Yasin-Core` است.
+
+### وابستگی‌های اختیاری
+
+وابستگی‌های الزامی در `requirements.txt` فهرست شده‌اند. مورد زیر اختیاری است و فقط روی برخی قابلیت‌های observability اثر دارد:
+
+- **`psutil`** — گزارش دقیق مصرف حافظه (RSS) و درصد CPU پردازش را در `yasin_core.observability.service` فعال می‌کند. بدون آن، مصرف حافظه به ماژول استاندارد `resource` برمی‌گردد و CPU به‌صورت `0.0` گزارش می‌شود. در صورت نیاز به متریک‌های دقیق‌تر، با `pip install psutil` نصبش کنید.
 
 ### تست
 
