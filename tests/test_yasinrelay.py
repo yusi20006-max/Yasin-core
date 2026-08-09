@@ -48,8 +48,9 @@ def test_subprocess_fetcher_missing_binary_raises():
         fetcher.fetch("@news")
 
 
+@patch("pathlib.Path.exists", return_value=True)
 @patch("subprocess.run")
-def test_subprocess_fetcher_happy_path(mock_run):
+def test_subprocess_fetcher_happy_path(mock_run, mock_exists):
     mock_run.return_value = Mock(
         returncode=0,
         stdout='[{"message_id": "123", "text": "hello from subprocess", "media_url": "https://cdn4-telesco-pe.translate.goog/file/img.jpg"}]',
@@ -64,8 +65,9 @@ def test_subprocess_fetcher_happy_path(mock_run):
     assert posts[0].channel == "@news"
 
 
+@patch("pathlib.Path.exists", return_value=True)
 @patch("subprocess.run")
-def test_subprocess_fetcher_corrupted_json(mock_run):
+def test_subprocess_fetcher_corrupted_json(mock_run, mock_exists):
     mock_run.return_value = Mock(
         returncode=0,
         stdout='invalid json output data',
@@ -77,8 +79,9 @@ def test_subprocess_fetcher_corrupted_json(mock_run):
     assert "JSON" in str(exc_info.value)
 
 
+@patch("pathlib.Path.exists", return_value=True)
 @patch("subprocess.run")
-def test_subprocess_fetcher_failure_complete(mock_run):
+def test_subprocess_fetcher_failure_complete(mock_run, mock_exists):
     import subprocess
     mock_run.side_effect = subprocess.CalledProcessError(
         returncode=1,
@@ -91,8 +94,9 @@ def test_subprocess_fetcher_failure_complete(mock_run):
     assert "شکست خورد" in str(exc_info.value) or "network unreachable" in str(exc_info.value)
 
 
+@patch("pathlib.Path.exists", return_value=True)
 @patch("subprocess.run")
-def test_subprocess_fetcher_timeout(mock_run):
+def test_subprocess_fetcher_timeout(mock_run, mock_exists):
     import subprocess
     mock_run.side_effect = subprocess.TimeoutExpired(
         cmd=["./fetcher/openfeed-fetch", "fetch"],
@@ -196,9 +200,10 @@ def test_publisher_success(mock_post):
     assert "sendMessage" in called_url
 
 
+@patch("pathlib.Path.exists", return_value=True)
 @patch("subprocess.run")
 @patch("yasinrelay.eitaa_publisher.requests.post")
-def test_publisher_uses_sendfile_when_media_present(mock_post, mock_run):
+def test_publisher_uses_sendfile_when_media_present(mock_post, mock_run, mock_exists):
     mock_post.return_value = Mock(status_code=200, text="ok")
     mock_run.return_value = Mock(returncode=0, stdout=b"fake image bytes")
     publisher = _make_publisher()
