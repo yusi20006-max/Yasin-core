@@ -21,4 +21,4 @@ observability = ["psutil"]
 version = {attr = "yasin_core.version.VERSION"}
 
 [tool.setuptools.packages.find]
-include = ["yasin_core*", "yasinrelay*"]
+include = ["yasin_core*"]

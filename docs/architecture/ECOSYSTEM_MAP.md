@@ -142,6 +142,8 @@ The diagram below illustrates the hierarchical relationships, integration paths,
 
 ### Core/Relay Duplication
 
+> **Note (Aug 2026)**: A separate, more literal issue was also found and resolved — the entire `yasinrelay/` package existed as a byte-identical copy inside the `Yasin-Core` repository itself (not just a conceptually similar reimplementation). That redundant copy has been removed from Yasin-Core; the canonical source is the standalone `YasinRelay` repository. The conceptual duplication described below (YasinRelay's own `yasinrelay/agent/` reimplementing patterns that also exist in `yasin_core`) is a separate, still-open architectural question about YasinRelay's own design, unaffected by that cleanup.
+
 #### Detailed Finding
 The ecosystem contains substantial duplicated `yasinrelay/agent` code within `YasinRelay` that mimics classes in `Yasin-Core`.
 - Specifically, the classes `BaseMemory`, `ContextManager`, `EventBus`, `PluginRegistry`, and `Workflow` inside YasinRelay perform identical roles to Yasin-Core's centralized services.

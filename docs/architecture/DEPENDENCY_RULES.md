@@ -79,10 +79,13 @@ def report_hub_status(success: bool, message: str) -> None:
 -   We prioritize **reusability** over duplication. Overlapping definitions should eventually be unified under Yasin-Core.
 -   If a function or abstraction is required by more than one adjacent project (e.g., Eitaa publishers, media resizing, or state machines), it should be promoted to a shared-package wrapper or registered directly as a core-supported plugin.
 
-### 2. The Core/Relay Exception
--   During this stabilization phase, the duplicated Agent system within `yasinrelay/agent/` **must not be removed or altered**.
--   This duplication is temporarily preserved to prevent any production behavior regressions or pipeline instability.
--   **Consolidation Rule**: Once the Go feed-fetch processes are fully stabilized in subsequent tasks, a migration will be scheduled to replace all of `yasinrelay/agent/` classes with direct public imports from `yasin_core.sdk`.
+### 2. The Core/Relay Exception (RESOLVED — Aug 2026)
+-   **Update**: The full `yasinrelay/` package (including `yasinrelay/agent/`) and the Go `fetcher/` source were removed from this repo. They were an exact, byte-identical duplicate of the code living in the standalone `YasinRelay` repository, not a divergent reimplementation — so no migration of behavior was needed, only removal of the redundant copy from Core.
+-   YasinRelay now consumes Yasin-Core exclusively via the public SDK (`yasin_core.sdk`), same as every other adjacent project. See the standalone `YasinRelay` repository for its application code and tests going forward.
+-   Historical context below is preserved for reference; it no longer describes the current state of this repo.
+-   ~~During this stabilization phase, the duplicated Agent system within `yasinrelay/agent/` must not be removed or altered.~~
+-   ~~This duplication is temporarily preserved to prevent any production behavior regressions or pipeline instability.~~
+-   ~~Consolidation Rule: Once the Go feed-fetch processes are fully stabilized in subsequent tasks, a migration will be scheduled to replace all of `yasinrelay/agent/` classes with direct public imports from `yasin_core.sdk`.~~
 
 ---
 
