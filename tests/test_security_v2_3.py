@@ -237,8 +237,16 @@ def test_security_manager_validation_methods():
     with pytest.raises(AuthenticationError):
         sec.validate_api_access("wrongkey", "/v1/query", "GET")
 
-    # Admin key override
-    assert sec.validate_api_access("admin-key", "/v1/any", "POST")
+    # اعطای دسترسی wildcard (admin) اکنون فقط از طریق ثبت صریح subject ممکن است،
+    # نه یک کلید ثابت هاردکد در کد (که یک backdoor امنیتی بود و حذف شده است).
+    admin_subject = Subject(id="api_key:realadmi", subject_type="api", permissions=["api:*"])
+    sec.register_subject(admin_subject)
+    assert sec.validate_api_access("realadminkey123", "/v1/any", "POST")
+
+    # رشته‌ی قدیمی "admin-key" دیگر هیچ دسترسی خاصی نمی‌دهد و باید مثل هر
+    # کلید ثبت‌نشده‌ی دیگری رد شود.
+    with pytest.raises(AuthenticationError):
+        sec.validate_api_access("admin-key", "/v1/any", "POST")
 
 
 def test_require_permission_decorator():

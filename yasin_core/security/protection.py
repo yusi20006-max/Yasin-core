@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import os
 import threading
 from abc import ABC, abstractmethod
@@ -49,43 +50,60 @@ class SensitiveDataProtector:
     """
     Provides secure encryption, decryption, and masking utilities for sensitive data
     without external dependencies. Falls back gracefully if external cryptographic modules are missing.
+
+    Security notes:
+    - If no master_key is supplied and YASIN_MASTER_KEY is not set, a random 32-byte
+      key is generated per process instead of falling back to a fixed, publicly-known
+      default. This is safe because InMemoryCredentialStore never persists to disk --
+      values are lost on restart regardless, so there is no cross-restart key-stability
+      requirement to preserve. Any future *persistent* credential store MUST require an
+      explicit YASIN_MASTER_KEY (a random per-process key would make previously
+      encrypted data permanently unreadable after a restart).
+    - Encryption uses a counter-mode SHA-256 keystream (a fresh 32-byte block is
+      derived per 32 bytes of plaintext from master_key+salt+counter), not a short
+      key XORed cyclically -- so the keystream never repeats within or across
+      ciphertexts, avoiding classic repeating-key-XOR cryptanalysis.
+    - Ciphertexts are authenticated with HMAC-SHA256 (encrypt-then-MAC), so tampering
+      or use of the wrong key is detected on decrypt rather than silently producing
+      garbage plaintext.
     """
 
     def __init__(self, master_key: Optional[str] = None):
-        # Use default or generate a persistent master key
-        self._master_key = (master_key or os.environ.get("YASIN_MASTER_KEY", "yasin_secret_default_salt_key")).encode("utf-8")
+        key_source = master_key or os.environ.get("YASIN_MASTER_KEY")
+        if key_source:
+            self._master_key = key_source.encode("utf-8")
+        else:
+            self._master_key = os.urandom(32)
 
-    def _derive_key(self, salt: bytes) -> bytes:
-        """Derive an encryption key from master key and salt using SHA-256."""
-        hasher = hashlib.sha256()
-        hasher.update(self._master_key)
-        hasher.update(salt)
-        return hasher.digest()
+    def _keystream(self, salt: bytes, length: int) -> bytes:
+        """Generate a `length`-byte keystream via counter-mode SHA-256 expansion."""
+        output = bytearray()
+        counter = 0
+        while len(output) < length:
+            output.extend(hashlib.sha256(self._master_key + salt + counter.to_bytes(4, "big")).digest())
+            counter += 1
+        return bytes(output[:length])
 
     def encrypt(self, data: str) -> str:
         """
-        Encrypt plain text to a secure base64 encoded payload with a random salt prefix.
-        Safe, dependency-free implementation.
+        Encrypt plain text to a secure base64 encoded payload with a random salt
+        prefix and an HMAC integrity tag. Safe, dependency-free implementation.
         """
         if not data:
             return ""
 
         salt = os.urandom(16)
-        key = self._derive_key(salt)
-
-        # XOR base encryption
         data_bytes = data.encode("utf-8")
-        encrypted_bytes = bytearray()
-        for i, byte in enumerate(data_bytes):
-            encrypted_bytes.append(byte ^ key[i % len(key)])
+        keystream = self._keystream(salt, len(data_bytes))
+        ciphertext = bytes(b ^ k for b, k in zip(data_bytes, keystream))
+        mac = hmac.new(self._master_key, salt + ciphertext, hashlib.sha256).digest()
 
-        # Combine salt and ciphertext
-        payload = salt + bytes(encrypted_bytes)
+        payload = salt + mac + ciphertext
         encoded = base64.b64encode(payload).decode("utf-8")
         return f"ENC:{encoded}"
 
     def decrypt(self, encrypted_data: str) -> str:
-        """Decrypt a payload encrypted via self.encrypt."""
+        """Decrypt a payload encrypted via self.encrypt, verifying its HMAC tag first."""
         if not encrypted_data:
             return ""
 
@@ -96,18 +114,25 @@ class SensitiveDataProtector:
             encoded_payload = encrypted_data[4:]
             payload = base64.b64decode(encoded_payload.encode("utf-8"))
 
-            if len(payload) < 16:
+            if len(payload) < 16 + 32:
                 raise SecurityError("Malformed encrypted payload (too short).")
 
             salt = payload[:16]
-            ciphertext = payload[16:]
-            key = self._derive_key(salt)
+            mac = payload[16:48]
+            ciphertext = payload[48:]
 
-            decrypted_bytes = bytearray()
-            for i, byte in enumerate(ciphertext):
-                decrypted_bytes.append(byte ^ key[i % len(key)])
+            expected_mac = hmac.new(self._master_key, salt + ciphertext, hashlib.sha256).digest()
+            if not hmac.compare_digest(mac, expected_mac):
+                raise SecurityError(
+                    "Integrity check failed: data may have been tampered with, "
+                    "or it was encrypted with a different master key."
+                )
 
+            keystream = self._keystream(salt, len(ciphertext))
+            decrypted_bytes = bytes(b ^ k for b, k in zip(ciphertext, keystream))
             return decrypted_bytes.decode("utf-8")
+        except SecurityError:
+            raise
         except Exception as e:
             raise SecurityError(f"Failed to decrypt sensitive data: {e}") from e
 
