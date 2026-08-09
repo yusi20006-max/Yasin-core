@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yasin-core"
+dynamic = ["version"]
+description = "Yasin-Core: kernel/runtime foundation for the Yasin AI Ecosystem (runtime, config, event bus, plugin system, provider abstraction, public SDK)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+observability = ["psutil"]
+
+[tool.setuptools.dynamic]
+version = {attr = "yasin_core.version.VERSION"}
+
+[tool.setuptools.packages.find]
+include = ["yasin_core*", "yasinrelay*"]
