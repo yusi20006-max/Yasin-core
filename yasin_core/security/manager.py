@@ -218,21 +218,18 @@ class SecurityManager(BaseService):
             if not api_key:
                 subject = Subject(id="anonymous", subject_type="api")
             else:
-                # Basic standard credential lookup: if key is present but unregistered, deny
-                # Let's check if the API key is registered, or create a default key-based subject with default permissions
-                # We can allow 'api_key:admin' to pass, or require explicit registration.
-                if api_key == "admin-key":
-                    subject = Subject(id=subject_id, subject_type="api", permissions=["api:*"])
-                else:
-                    self._audit_logger.log_event(
-                        action="api_access",
-                        subject_id="unregistered",
-                        subject_type="api",
-                        resource=f"api:{endpoint}:{method}",
-                        result="DENIED",
-                        details="Invalid or unregistered API key"
-                    )
-                    raise AuthenticationError("Authentication Failed: Invalid API Key")
+                # کلید API ثبت‌نشده: دسترسی رد می‌شود. ثبت صریح Subject از طریق
+                # register_subject() تنها راه اعطای دسترسی است — هیچ کلید یا
+                # backdoor خاصی در کد پذیرفته نمی‌شود.
+                self._audit_logger.log_event(
+                    action="api_access",
+                    subject_id="unregistered",
+                    subject_type="api",
+                    resource=f"api:{endpoint}:{method}",
+                    result="DENIED",
+                    details="Invalid or unregistered API key"
+                )
+                raise AuthenticationError("Authentication Failed: Invalid API Key")
 
         permission_needed = f"api:{endpoint}:{method.upper()}"
         granted = self._policy_engine.evaluate_all(subject, permission_needed, self._roles)
