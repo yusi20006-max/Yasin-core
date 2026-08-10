@@ -1,5 +1,7 @@
 # Yasin-Core v3.3: Production Hardening & Reliability Audit Report
 
+> **⚠️ Addendum (Aug 2026)**: A follow-up audit found this report's "PASS" on security did **not** catch a hardcoded admin API-key backdoor (`"admin-key"` granted wildcard `api:*` access) or a weak default-key XOR "encryption" scheme in the credential protector — both since fixed. The "289 tests" figure below is also stale: the suite has since changed (duplicated `yasinrelay/` code removed, tests recovered/added/fixed elsewhere), currently at 237 passing. Treat this document as a historical snapshot, not the current security or test-count status.
+
 This document presents a comprehensive, system-wide production readiness and reliability audit of the **Yasin-Core** framework (the central runtime and infrastructure layer of the Yasin AI Ecosystem).
 
 ---
