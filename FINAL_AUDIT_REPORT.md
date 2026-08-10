@@ -1,5 +1,7 @@
 # Final Audit Report - Yasin-Core v3.3.0 Stable
 
+> **⚠️ Addendum (Aug 2026)**: See PRODUCTION_AUDIT.md's addendum — this earlier audit missed a hardcoded admin backdoor and a weak encryption scheme in the security module, both since fixed, and its test-suite figures are stale (currently 237 passing after later structural changes). Treat this document as a historical snapshot.
+
 This audit report compiles final validation results for the **Yasin-Core v3.3.0** stable release, confirming its readiness to serve as the long-term stable, production-hardened foundation of the Yasin AI Ecosystem.
 
 ---

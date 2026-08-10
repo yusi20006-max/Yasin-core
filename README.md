@@ -21,6 +21,19 @@ This repository is currently under release-freeze validation for `v3.3.0`. Featu
 - Storage, security, and observability building blocks
 - Plugin, provider, and SDK extension points
 
+### Installation
+
+```bash
+pip install -e /path/to/Yasin-Core
+# or, for a specific consumer repo cloned alongside this one:
+pip install -e ../Yasin-Core
+```
+
+Optional observability extras:
+```bash
+pip install -e "/path/to/Yasin-Core[observability]"
+```
+
 ### Repository Structure
 
 Key top-level areas:
@@ -108,6 +121,15 @@ Yasin-Core serves as the shared backend and runtime foundation for the broader Y
 - سازگاری و migration بین اجزای اکوسیستم
 - اجزای پایه برای storage، security و observability
 - نقاط توسعه برای plugin، provider و SDK
+
+### نصب
+
+bash
+pip install -e /path/to/Yasin-Core
+
+اکسترای اختیاری observability:
+bash
+pip install -e "/path/to/Yasin-Core[observability]"
 
 ### ساختار مخزن
 
