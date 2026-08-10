@@ -37,7 +37,7 @@ class AuditLogger:
         Record a security event, log it, append to history, and dispatch to the EventBus.
         """
         entry = {
-            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "action": action,
             "subject_id": subject_id,
             "subject_type": subject_type,
