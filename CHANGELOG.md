@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Added
+- Machine-checkable Core SDK contract registry (`yasin_core/sdk/contract_registry.json`) and regression tests (Issue #101).
+- Static public SDK import-boundary enforcement via AST (`python -m yasin_core.sdk.boundary`), registry-driven, with regression tests and consumer CI guidance (Issue #103).
+
+### Changed
+- Extended Python CI matrix limited to certified versions 3.9–3.13.
+
 ## [3.3.0] - 2025-02-23
 
 ### Added
@@ -18,9 +27,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Observability & Metrics System (v2.4)**: Thread-safe counters, gauges, histograms, structured JSON formatting, error tracker, performance timers, and non-blocking metric gathering.
 - **Unified Public SDK v2 (v3.1)**: Exposes API groupings (`agents`, `tasks`, `memory`, `context`, `tools`) under a client `.v2` property while retaining full backward compatibility.
 - **API Gateway Layer (v2.2)**: Extensible API Gateway, request models, standardized responses, and WSGI wrapper support.
-3.3.0 -m "Yasin-Core v3.3.0"
-git push origin main
-git push origin v3.3.0
 - **Plugin System Core Foundation (v1.6)**: Fully isolated lifecycle states with circular dependency validation, file discovery, and Agent runtime bridge.
 
 ### Fixed
