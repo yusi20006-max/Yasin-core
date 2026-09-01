@@ -5,3 +5,4 @@ logs/
 fetcher/openfeed-fetch
 .env
 .pytest_cache/
+*.egg-info/
