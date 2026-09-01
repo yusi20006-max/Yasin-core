@@ -108,3 +108,66 @@ See `docs/PHASE6_PYTHON_MATRIX.md` and the `compatibility` section of the regist
 - Additive, non-breaking changes only
 - Single source of truth (this registry), not duplicated competing manifests
 - Existing public behavior preserved
+
+## Import boundary enforcement
+
+Policy in the registry is enforced by a **static AST checker** (no runtime imports of consumer code):
+
+```bash
+python -m yasin_core.sdk.boundary path/to/consumer/src
+```
+
+Implementation: `yasin_core/sdk/boundary.py`.
+
+### What is detected
+
+- `import yasin_core.<internal>`
+- `import yasin_core.<internal> as alias`
+- `from yasin_core.<internal> import ...`
+- nested modules under any `forbidden_consumer_import_prefixes` entry
+- multiple names in a single `import` statement
+
+### What is allowed
+
+- `import yasin_core.sdk` and `from yasin_core.sdk import ...`
+- nested modules under the supported boundary (e.g. `yasin_core.sdk.client`)
+- stdlib / third-party packages
+- relative imports inside the consumer package
+
+Strings and comments are ignored (AST-only).
+
+### Diagnostics
+
+Each violation reports **file**, **line**, **module**, **statement**, and **reason**.
+
+JSON mode for CI tooling:
+
+```bash
+python -m yasin_core.sdk.boundary --json path/to/src
+```
+
+Exit code `1` when any violation is found; `0` when clean.
+
+### Integrating ecosystem repositories
+
+Yasin-Agent, YasinHub, YasinRelay, and YasinCLI should:
+
+1. Depend on a Yasin-Core version that includes this checker.
+2. Add a CI step, for example:
+
+```yaml
+- run: pip install -e ../Yasin-core
+- run: python -m yasin_core.sdk.boundary src/
+```
+
+3. Fix any reported imports by switching to `yasin_core.sdk`.
+
+This repository does not modify those external codebases in-place; enforcement is reusable and intended to run **in each consumer's CI** against that consumer's source tree.
+
+### Changing the boundary
+
+Update **only** `yasin_core/sdk/contract_registry.json`, then ensure:
+
+- `tests/test_sdk_contract.py` still passes (export / schema drift)
+- `tests/test_sdk_boundary.py` still passes (enforcement)
+- documentation reflects the new prefixes
