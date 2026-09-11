@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [3.4.0]
+
 ### Added
 - Shared ecosystem contracts (`yasin_core.contracts`, re-exported from `yasin_core.sdk`): health states/reports, service status snapshots and Control Plane verdicts (read models only), structured error info with secret redaction (Issue #106). No lifecycle, no process control, no new dependencies.
 - Contract registry bumped to 1.1.0 (additive exports only) with regression tests.
