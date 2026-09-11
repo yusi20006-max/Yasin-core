@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "core_version": "3.3.0",
   "status": "stable",
   "description": "Canonical machine-checkable public SDK and ecosystem contract registry for Yasin-Core. Single source of truth for public surface and consumer boundaries.",
@@ -176,7 +176,20 @@
           "register_backend",
           "require_permission",
           "tool",
-          "translate_core_errors"
+          "translate_core_errors",
+          "HealthState",
+          "HealthReport",
+          "coerce_health_state",
+          "ServiceStatusValue",
+          "ControlAction",
+          "ServiceStatus",
+          "ControlResult",
+          "coerce_status_value",
+          "coerce_control_action",
+          "ErrorCode",
+          "ErrorInfo",
+          "redact_secrets",
+          "coerce_error_code"
         ]
       }
     }
