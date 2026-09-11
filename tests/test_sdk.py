@@ -2,6 +2,7 @@ from typing import Dict, Any
 import pytest
 from yasin_core.sdk import YasinCoreClient
 from yasin_core.agents import BaseAgent, Task
+from yasin_core.version import VERSION as CORE_VERSION
 
 
 class DummyAgent(BaseAgent):
@@ -24,15 +25,15 @@ def test_sdk_import_and_creation():
 
 def test_sdk_version_methods():
     client = YasinCoreClient()
-    assert client.get_version() == "3.3.0"
-    assert client.version == "3.3.0"
+    assert client.get_version() == CORE_VERSION
+    assert client.version == CORE_VERSION
 
 
 def test_sdk_info_methods():
     client = YasinCoreClient()
     info_dict = client.get_info()
     assert info_dict["name"] == "Yasin Core SDK Client"
-    assert info_dict["version"] == "3.3.0"
+    assert info_dict["version"] == CORE_VERSION
     info_dict_alt = client.info()
     assert info_dict_alt == info_dict
 
