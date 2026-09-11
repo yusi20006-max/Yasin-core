@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 
 ### Added
+- Shared ecosystem contracts (`yasin_core.contracts`, re-exported from `yasin_core.sdk`): health states/reports, service status snapshots and Control Plane verdicts (read models only), structured error info with secret redaction (Issue #106). No lifecycle, no process control, no new dependencies.
+- Contract registry bumped to 1.1.0 (additive exports only) with regression tests.
 - Machine-checkable Core SDK contract registry (`yasin_core/sdk/contract_registry.json`) and regression tests (Issue #101).
 - Static public SDK import-boundary enforcement via AST (`python -m yasin_core.sdk.boundary`), registry-driven, with regression tests and consumer CI guidance (Issue #103).
 

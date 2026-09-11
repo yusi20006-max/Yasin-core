@@ -131,6 +131,25 @@ from .interfaces import ISDKClient, ISDKAuthenticator
 from .compat import SDKVersionChecker, deprecated, SDKMigrationHelper
 from .async_client import AsyncYasinCoreClient
 
+# Import Shared Ecosystem Contracts (observation vocabulary only: health,
+# service status snapshots, Control Plane verdicts, structured errors).
+# Read models — they grant no lifecycle power and create no Control Plane.
+from yasin_core.contracts import (
+    HealthState,
+    HealthReport,
+    coerce_health_state,
+    ServiceStatusValue,
+    ControlAction,
+    ServiceStatus,
+    ControlResult,
+    coerce_status_value,
+    coerce_control_action,
+    ErrorCode,
+    ErrorInfo,
+    redact_secrets,
+    coerce_error_code,
+)
+
 # Import Compatibility Framework components
 from yasin_core.compatibility import (
     Version,
@@ -301,6 +320,20 @@ __all__ = [
     "deprecated",
     "SDKMigrationHelper",
     "AsyncYasinCoreClient",
+    # Shared Ecosystem Contracts
+    "HealthState",
+    "HealthReport",
+    "coerce_health_state",
+    "ServiceStatusValue",
+    "ControlAction",
+    "ServiceStatus",
+    "ControlResult",
+    "coerce_status_value",
+    "coerce_control_action",
+    "ErrorCode",
+    "ErrorInfo",
+    "redact_secrets",
+    "coerce_error_code",
     # Compatibility Framework exports
     "Version",
     "is_compatible",
